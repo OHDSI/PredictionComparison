@@ -1,0 +1,29 @@
+Package: PredictionComparison
+Type: Package
+Title: Package for comparing patient level predictions developed using OHDSI's PatientLevelPreidiction package
+Version: 0.1.0
+Date: 2018-03-01
+Author: Jenna Reps [aut],
+    Martijn J. Schuemie [aut, cre],
+    Marc A. Suchard [aut],
+    Patrick B. Ryan [aut],
+    Peter R. Rijnbeek [aut]
+Maintainer: Jenna Reps <reps@ohdsi.org>
+Description: A package for comparing and storing patient level prediction models. 
+License: Apache License 2.0
+Depends:
+    R (>= 3.3.0), 
+    DatabaseConnector (>= 1.11.4),
+    FeatureExtraction (>= 2.0.0),
+    Cyclops (>= 1.2.2),
+    PatientLevelPrediction (>= 2.0.0)
+Imports:
+    ggplot2,
+    gridExtra,
+    ff,
+    ffbase (>= 0.12.1)
+Suggests:
+  testthat,
+LinkingTo: Rcpp
+NeedsCompilation: No
+RoxygenNote: 6.0.1

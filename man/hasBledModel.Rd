@@ -6,7 +6,7 @@
 \usage{
 hasBledModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
   outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
-  oracleTempSchema = NULL)
+  oracleTempSchema = NULL, removePriorOutcome = T)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}
@@ -25,7 +25,7 @@ hasBledModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 
 \item{outcomeId}{An iteger specifying the cohort id for the outcome cohorts}
 
-\item{oracleTempSchema}{}
+\item{removePriorOutcome}{Remove people with prior outcomes from the target population}
 }
 \value{
 A list containing the model performance and the personal predictions for each subject in the target population

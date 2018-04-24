@@ -1,7 +1,7 @@
-#' Apply the existing model ATRIA using the standardised framework
+#' Apply the existing model Atria stroke risk using the standardised framework
 #'
 #' @details
-#' This function applies ATRIA to a target cohort and validates the performance
+#' This function applies Atria stroke risk to a target cohort and validates the performance
 # using the outcome cohort
 #'
 #' @param connectionDetails                The connection details for extracting the data
@@ -19,16 +19,16 @@
 #' A list containing the model performance and the personal predictions for each subject in the target population
 #'
 #' @export
-atriaModel <- function(connectionDetails,
-                    cdmDatabaseSchema,
-                    cohortDatabaseSchema,
-                    outcomeDatabaseSchema,
-                    cohortTable,
-                    outcomeTable,
-                    cohortId,
-                    outcomeId,
-                    oracleTempSchema=NULL,
-                    removePriorOutcome=T){
+atriaStrokeModel <- function(connectionDetails,
+                         cdmDatabaseSchema,
+                         cohortDatabaseSchema,
+                         outcomeDatabaseSchema,
+                         cohortTable,
+                         outcomeTable,
+                         cohortId,
+                         outcomeId,
+                         oracleTempSchema=NULL,
+                         removePriorOutcome = T){
 
   #input checks...
   if(missing(connectionDetails))
@@ -48,35 +48,24 @@ atriaModel <- function(connectionDetails,
   if(missing(outcomeId))
     stop('Need to enter outcomeId')
 
-  conceptSets <- system.file("extdata", "conceptSets.csv", package = "PredictionComparison")
+  conceptSets <- system.file("extdata", "existingStrokeModels_concepts.csv", package = "PredictionComparison")
   conceptSets <- read.csv(conceptSets)
 
-  existingBleedModels <- system.file("extdata", "existingBleedModels.csv", package = "PredictionComparison")
+  existingBleedModels <- system.file("extdata", "existingStrokeModels_modelTable.csv", package = "PredictionComparison")
   existingBleedModels <- read.csv(existingBleedModels)
 
-  modelNames <- system.file("extdata", "modelNames.csv", package = "PredictionComparison")
+  modelNames <- system.file("extdata", "existingStrokeModels_models.csv", package = "PredictionComparison")
   modelNames <- read.csv(modelNames)
 
-  modelTable <- existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='ATRIA'],]
+  modelTable <- existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='Atria'],]
   modelTable <- modelTable[,c('modelId','modelCovariateId','coefficientValue')]
 
   # use history anytime prior by setting long term look back to 9999
-  covariateSettings <- FeatureExtraction::createCovariateSettings(useDemographicsAgeGroup = T,
+  covariateSettings <- FeatureExtraction::createCovariateSettings(useDemographicsAgeGroup  = T,
+                                                                  useDemographicsGender = T,
                                                                   useConditionOccurrenceLongTerm = T,
                                                                   useConditionGroupEraLongTerm = T,
-                                                                  useConditionGroupEraMediumTerm  = T,
-                                                                  useConditionEraLongTerm = T,
-                                                                  useDrugGroupEraLongTerm =  T,
-                                                                  useDrugExposureLongTerm = T,
-                                                                  useProcedureOccurrenceLongTerm = T,
-                                                                  useProcedureOccurrenceShortTerm = T,
-                                                                  useDeviceExposureLongTerm = T,
-                                                                  useMeasurementRangeGroupLongTerm = T,
-                                                                  useMeasurementLongTerm = T,
-                                                                  useObservationLongTerm = T,
-                                                                  longTermStartDays = -9999,
-                                                                  mediumTermStartDays = -365,
-                                                                  shortTermStartDays = -30)
+                                                                  longTermStartDays = -365*5)
 
   result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                                           covariateTable = conceptSets[,c('modelCovariateId','covariateId')],
@@ -107,7 +96,7 @@ atriaModel <- function(connectionDetails,
                        cohortId=cohortId,
                        outcomeId=outcomeId,
                        oracleTempSchema=oracleTempSchema)
-  result <- list(model='atria',
+  result <- list(model='atriaStroke',
                  analysisRef ='000000',
                  inputSetting =inputSetting,
                  executionSummary = 'Not available',

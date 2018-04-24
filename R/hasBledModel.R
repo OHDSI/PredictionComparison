@@ -13,6 +13,7 @@
 #' @param cohortId             An iteger specifying the cohort id for the target population cohorts
 #' @param outcomeId          An iteger specifying the cohort id for the outcome cohorts
 #' @param oracleTempSchema
+#' @param removePriorOutcome  Remove people with prior outcomes from the target population
 #'
 #' @return
 #' A list containing the model performance and the personal predictions for each subject in the target population
@@ -26,7 +27,8 @@ hasBledModel <- function(connectionDetails,
                     outcomeTable,
                     cohortId,
                     outcomeId,
-                    oracleTempSchema=NULL){
+                    oracleTempSchema=NULL,
+                    removePriorOutcome=T){
 
   #input checks...
   if(missing(connectionDetails))
@@ -82,6 +84,7 @@ result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                               requireTimeAtRisk = T,
                                               minTimeAtRisk = 364,
                                               includeAllOutcomes = T,
+                                              removeSubjectsWithPriorOutcome =removePriorOutcome,
                                               connectionDetails = connectionDetails,
                                               cdmDatabaseSchema = cdmDatabaseSchema,
                                               cohortDatabaseSchema = cohortDatabaseSchema,

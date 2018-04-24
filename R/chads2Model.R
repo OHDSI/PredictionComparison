@@ -13,6 +13,7 @@
 #' @param cohortId             An iteger specifying the cohort id for the target population cohorts
 #' @param outcomeId          An iteger specifying the cohort id for the outcome cohorts
 #' @param oracleTempSchema
+#' @param removePriorOutcome  Remove people with prior outcomes from the target population
 #'
 #' @return
 #' A list containing the model performance and the personal predictions for each subject in the target population
@@ -26,7 +27,8 @@ chads2Model <- function(connectionDetails,
                     outcomeTable,
                     cohortId,
                     outcomeId,
-                    oracleTempSchema=NULL){
+                    oracleTempSchema=NULL,
+                    removePriorOutcome=T){
 
   #input checks...
   if(missing(connectionDetails))
@@ -74,7 +76,8 @@ population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             requireTimeAtRisk = T,
                                                             minTimeAtRisk = 364,
                                                             includeAllOutcomes = T,
-                                                            firstExposureOnly = F )
+                                                            firstExposureOnly = F,
+                                                            removeSubjectsWithPriorOutcome =removePriorOutcome)
 
 prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
 colnames(prediction)[colnames(prediction)=='covariateValue'] <- 'value'

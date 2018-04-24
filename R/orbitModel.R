@@ -1,7 +1,7 @@
-#' Apply the existing model ATRIA using the standardised framework
+#' Apply the existing model ORBIT using the standardised framework
 #'
 #' @details
-#' This function applies ATRIA to a target cohort and validates the performance
+#' This function applies ORBIT to a target cohort and validates the performance
 # using the outcome cohort
 #'
 #' @param connectionDetails                The connection details for extracting the data
@@ -19,16 +19,16 @@
 #' A list containing the model performance and the personal predictions for each subject in the target population
 #'
 #' @export
-atriaModel <- function(connectionDetails,
-                    cdmDatabaseSchema,
-                    cohortDatabaseSchema,
-                    outcomeDatabaseSchema,
-                    cohortTable,
-                    outcomeTable,
-                    cohortId,
-                    outcomeId,
-                    oracleTempSchema=NULL,
-                    removePriorOutcome=T){
+orbitModel <- function(connectionDetails,
+                         cdmDatabaseSchema,
+                         cohortDatabaseSchema,
+                         outcomeDatabaseSchema,
+                         cohortTable,
+                         outcomeTable,
+                         cohortId,
+                         outcomeId,
+                         oracleTempSchema=NULL,
+                       removePriorOutcome=T){
 
   #input checks...
   if(missing(connectionDetails))
@@ -57,26 +57,24 @@ atriaModel <- function(connectionDetails,
   modelNames <- system.file("extdata", "modelNames.csv", package = "PredictionComparison")
   modelNames <- read.csv(modelNames)
 
-  modelTable <- existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='ATRIA'],]
+  modelTable <- existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='ORBIT'],]
   modelTable <- modelTable[,c('modelId','modelCovariateId','coefficientValue')]
 
   # use history anytime prior by setting long term look back to 9999
   covariateSettings <- FeatureExtraction::createCovariateSettings(useDemographicsAgeGroup = T,
                                                                   useConditionOccurrenceLongTerm = T,
                                                                   useConditionGroupEraLongTerm = T,
-                                                                  useConditionGroupEraMediumTerm  = T,
                                                                   useConditionEraLongTerm = T,
                                                                   useDrugGroupEraLongTerm =  T,
+                                                                  useDrugGroupEraShortTerm =  T,
                                                                   useDrugExposureLongTerm = T,
                                                                   useProcedureOccurrenceLongTerm = T,
-                                                                  useProcedureOccurrenceShortTerm = T,
                                                                   useDeviceExposureLongTerm = T,
                                                                   useMeasurementRangeGroupLongTerm = T,
                                                                   useMeasurementLongTerm = T,
                                                                   useObservationLongTerm = T,
                                                                   longTermStartDays = -9999,
-                                                                  mediumTermStartDays = -365,
-                                                                  shortTermStartDays = -30)
+                                                                  shortTermStartDays = -60)
 
   result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                                           covariateTable = conceptSets[,c('modelCovariateId','covariateId')],
@@ -107,7 +105,7 @@ atriaModel <- function(connectionDetails,
                        cohortId=cohortId,
                        outcomeId=outcomeId,
                        oracleTempSchema=oracleTempSchema)
-  result <- list(model='atria',
+  result <- list(model='orbit',
                  analysisRef ='000000',
                  inputSetting =inputSetting,
                  executionSummary = 'Not available',

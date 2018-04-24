@@ -1,7 +1,7 @@
-#' Apply the existing model ATRIA using the standardised framework
+#' Apply the existing model Framingham stroke risk using the standardised framework
 #'
 #' @details
-#' This function applies ATRIA to a target cohort and validates the performance
+#' This function applies Framingham stroke risk to a target cohort and validates the performance
 # using the outcome cohort
 #'
 #' @param connectionDetails                The connection details for extracting the data
@@ -19,16 +19,16 @@
 #' A list containing the model performance and the personal predictions for each subject in the target population
 #'
 #' @export
-atriaModel <- function(connectionDetails,
-                    cdmDatabaseSchema,
-                    cohortDatabaseSchema,
-                    outcomeDatabaseSchema,
-                    cohortTable,
-                    outcomeTable,
-                    cohortId,
-                    outcomeId,
-                    oracleTempSchema=NULL,
-                    removePriorOutcome=T){
+framinghamModel <- function(connectionDetails,
+                         cdmDatabaseSchema,
+                         cohortDatabaseSchema,
+                         outcomeDatabaseSchema,
+                         cohortTable,
+                         outcomeTable,
+                         cohortId,
+                         outcomeId,
+                         oracleTempSchema=NULL,
+                         removePriorOutcome=T){
 
   #input checks...
   if(missing(connectionDetails))
@@ -48,41 +48,77 @@ atriaModel <- function(connectionDetails,
   if(missing(outcomeId))
     stop('Need to enter outcomeId')
 
-  conceptSets <- system.file("extdata", "conceptSets.csv", package = "PredictionComparison")
+  conceptSets <- system.file("extdata", "existingStrokeModels_concepts.csv", package = "PredictionComparison")
   conceptSets <- read.csv(conceptSets)
 
-  existingBleedModels <- system.file("extdata", "existingBleedModels.csv", package = "PredictionComparison")
+  existingBleedModels <- system.file("extdata", "existingStrokeModels_modelTable.csv", package = "PredictionComparison")
   existingBleedModels <- read.csv(existingBleedModels)
 
-  modelNames <- system.file("extdata", "modelNames.csv", package = "PredictionComparison")
+  modelNames <- system.file("extdata", "existingStrokeModels_models.csv", package = "PredictionComparison")
   modelNames <- read.csv(modelNames)
 
-  modelTable <- existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='ATRIA'],]
+  modelTable <- existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='Framingham'],]
   modelTable <- modelTable[,c('modelId','modelCovariateId','coefficientValue')]
 
   # use history anytime prior by setting long term look back to 9999
-  covariateSettings <- FeatureExtraction::createCovariateSettings(useDemographicsAgeGroup = T,
+  covariateSettings <- FeatureExtraction::createCovariateSettings(useDemographicsGender = T,
                                                                   useConditionOccurrenceLongTerm = T,
                                                                   useConditionGroupEraLongTerm = T,
-                                                                  useConditionGroupEraMediumTerm  = T,
                                                                   useConditionEraLongTerm = T,
-                                                                  useDrugGroupEraLongTerm =  T,
-                                                                  useDrugExposureLongTerm = T,
-                                                                  useProcedureOccurrenceLongTerm = T,
-                                                                  useProcedureOccurrenceShortTerm = T,
-                                                                  useDeviceExposureLongTerm = T,
-                                                                  useMeasurementRangeGroupLongTerm = T,
-                                                                  useMeasurementLongTerm = T,
-                                                                  useObservationLongTerm = T,
-                                                                  longTermStartDays = -9999,
-                                                                  mediumTermStartDays = -365,
-                                                                  shortTermStartDays = -30)
+                                                                  longTermStartDays = -9999)
+
+  # cust code to do the age scores...
+  cust <- data.frame(covariateId=-1, sql="insert into @targetCovariateTable
+select distinct b.@rowIdField as row_id,
+case
+when
+datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=60
+and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=62
+then -1
+when
+datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=63
+and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=66
+then -2
+when
+datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=67
+                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=71
+then -3
+when
+datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=72
+                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=74
+then -4
+when
+datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=75
+                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=77
+then -5
+when
+datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=78
+                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=81
+then -6
+when
+datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=82
+                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=85
+then -7
+when
+datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=86
+                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=90
+then -8
+when
+datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=91
+                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=93
+then -9 else
+-10 end as covariate_id,  1 as covariate_value
+from @cdmDatabaseSchema.person a inner join @cohortTable b
+on a.person_id=b.subject_id
+where datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=60
+")
 
   result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                                           covariateTable = conceptSets[,c('modelCovariateId','covariateId')],
                                                           interceptTable = NULL,
                                                           type = 'score',
                                                           covariateSettings = covariateSettings,
+                                                          customCovariates =cust,
                                                           riskWindowStart = 1,
                                                           riskWindowEnd = 365,
                                                           requireTimeAtRisk = T,
@@ -107,7 +143,7 @@ atriaModel <- function(connectionDetails,
                        cohortId=cohortId,
                        outcomeId=outcomeId,
                        oracleTempSchema=oracleTempSchema)
-  result <- list(model='atria',
+  result <- list(model='Framingham',
                  analysisRef ='000000',
                  inputSetting =inputSetting,
                  executionSummary = 'Not available',

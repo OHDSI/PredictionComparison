@@ -31,7 +31,9 @@ Getting Started
   ```r
 install.packages("drat")
 drat::addRepo("OHDSI")
-install.packages("PredictionComparison")
+install.packages("PatientLevelPrediction")
+install.packages("devtools")
+devtools::install_github("OHDSI/PredictionComparison")
 ```
 
   Getting Involved

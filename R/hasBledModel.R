@@ -103,12 +103,14 @@ inputSetting <- list(connectionDetails=connectionDetails,
                      cohortId=cohortId,
                      outcomeId=outcomeId,
                      oracleTempSchema=oracleTempSchema)
-result <- list(model='hasbled',
+result <- list(model=list(model='hasbled'),
                analysisRef ='000000',
                inputSetting =inputSetting,
                executionSummary = 'Not available',
                prediction=result$prediction,
                performanceEvaluation=result$performance)
+class(result$model) <- 'plpModel'
+attr(result$model, "type")<- 'existing model'
 class(result) <- 'runPlp'
 return(result)
 }

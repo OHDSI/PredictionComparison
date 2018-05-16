@@ -143,12 +143,14 @@ where datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1
                        cohortId=cohortId,
                        outcomeId=outcomeId,
                        oracleTempSchema=oracleTempSchema)
-  result <- list(model='Framingham',
+  result <- list(model=list(model='Framingham'),
                  analysisRef ='000000',
                  inputSetting =inputSetting,
                  executionSummary = 'Not available',
                  prediction=result$prediction,
                  performanceEvaluation=result$performance)
+  class(result$model) <- 'plpModel'
+  attr(result$model, "type")<- 'existing model'
   class(result) <- 'runPlp'
   return(result)
 }

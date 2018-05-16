@@ -121,12 +121,14 @@ inputSetting <- list(connectionDetails=connectionDetails,
                       cohortId=cohortId,
                       outcomeId=outcomeId,
                       oracleTempSchema=oracleTempSchema)
-result <- list(model='chads2',
+result <- list(model=list(model='chads2'),
                analysisRef ='000000',
                inputSetting =inputSetting,
                executionSummary = 'Not available',
                prediction=prediction,
                performanceEvaluation=performance)
+class(result$model) <- 'plpModel'
+attr(result$model, "type")<- 'existing model'
 class(result) <- 'runPlp'
 return(result)
 }

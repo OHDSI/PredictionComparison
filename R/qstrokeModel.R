@@ -110,12 +110,14 @@ on a.row_id=b.row_id")
                        cohortId=cohortId,
                        outcomeId=outcomeId,
                        oracleTempSchema=oracleTempSchema)
-  result <- list(model='qstroke',
+  result <- list(model=list(model='qstroke'),
                  analysisRef ='000000',
                  inputSetting =inputSetting,
                  executionSummary = 'Not available',
                  prediction=result$prediction,
                  performanceEvaluation=result$performance)
+  class(result$model) <- 'plpModel'
+  attr(result$model, "type")<- 'existing model'
   class(result) <- 'runPlp'
   return(result)
 }

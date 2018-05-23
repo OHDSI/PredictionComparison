@@ -1,6 +1,6 @@
 # @file metrics.R
 #
-# Copyright 2017 Observational Health Data Sciences and Informatics
+# Copyright 2018 Observational Health Data Sciences and Informatics
 #
 # This file is part of PatientLevelPrediction
 #
@@ -26,12 +26,94 @@
 #' @param plpModel1    The object returned by runPlp() containing the trained model or the output when implementing an existing model
 #' @param plpModel2    The object returned by runPlp() containing the trained model or the output when implementing an existing model
 #' @param thresholds   A sequence of predicting tresholds to calcuate the NRI at each of these tresholds
+#' @param secondThresholds A sequence of predicting tresholds to calcuate the NRI at each of these tresholds for the second model (if NULL uses thresholds)
 #' @return
 #' A list containing the NRI value and z-value (can be used for statistical significance) plus various values used to calculate the
 #' NRI for each thresold. A positive value suggests the first model is better than the second model.  A negative values suggests the opposite.
 #'
 #' @export
-NRI <- function(plpModel1, plpModel2, thresholds=seq(0,1,1/100)){
+NRI <- function(plpModel1, plpModel2, thresholds=seq(0,1,1/100), secondThresholds=NULL){
+
+  if(!class(plpModel1)=="runPlp"){
+    stop('Incorrect class for plpModel1')
+  }
+  if(!class(plpModel2)=="runPlp"){
+    stop('Incorrect class for plpModel1')
+  }
+  if(nrow(plpModel1$prediction)!=nrow(plpModel2$prediction)){
+    warning('Model predictions are different sizes')
+  }
+
+  if(is.null(secondThresholds)){
+    secondThresholds <- thresholds
+  } else {
+    if(length(thresholds)!=length(secondThresholds)){
+      stop('thresholds and secondThresholds length mismatch')
+    }
+  }
+
+  ind1 <- 1:nrow(plpModel1$prediction)
+  if(!is.null(plpModel1$prediction$indexes)){
+    ind1 <- plpModel1$prediction$indexes<0
+  }
+  ind2 <- 1:nrow(plpModel2$prediction)
+  if(!is.null(plpModel2$prediction$indexes)){
+    ind2 <- plpModel2$prediction$indexes<0
+  }
+
+  prediction1 <- plpModel1$prediction[ind1,c('rowId','outcomeCount','value')]
+  colnames(prediction1)[3] <- 'Model1'
+  prediction2 <- plpModel2$prediction[ind2,c('rowId','value')]
+  colnames(prediction2)[2] <- 'Model2'
+
+  allres <- merge(prediction1, prediction2)
+
+  results <- list()
+  length(results) <- length(thresholds)
+  for(i in 1:length(thresholds)){
+    threshold <- thresholds[i]
+    threshold2 <- secondThresholds[i]
+
+    outcomesTab <- table(allres$Model1[allres$outcomeCount>0]>=threshold,
+          allres$Model2[allres$outcomeCount>0]>=threshold2)
+    nooutcomesTab <- table(allres$Model1[allres$outcomeCount==0]>=threshold,
+                      allres$Model2[allres$outcomeCount==0]>=threshold2)
+
+    pup_event <- sum(allres$Model1[allres$outcomeCount>0]>=threshold & !allres$Model2[allres$outcomeCount>0]>=threshold2)/sum(allres$outcomeCount>0)
+    pup_noevent <- sum(allres$Model1[allres$outcomeCount==0]>=threshold & !allres$Model2[allres$outcomeCount==0]>=threshold2)/sum(allres$outcomeCount==0)
+    pdown_event <- sum(allres$Model1[allres$outcomeCount>0]<threshold & !allres$Model2[allres$outcomeCount>0]<threshold2)/sum(allres$outcomeCount>0)
+    pdown_noevent <- sum(allres$Model1[allres$outcomeCount==0]<threshold & !allres$Model2[allres$outcomeCount==0]<threshold2)/sum(allres$outcomeCount==0)
+
+    nri <- (pup_event-pdown_event)-(pup_noevent-pdown_noevent)
+
+    z <- nri/(sqrt((pup_event+pdown_event)/sum(allres$outcomeCount>0) + (pup_noevent+pdown_noevent)/sum(allres$outcomeCount==0)))
+
+    z_events <- (pup_event-pdown_event)/sqrt((pup_event+pdown_event)/sum(allres$outcomeCount>0))
+    z_noevents <- (-pup_noevent+pdown_noevent)/sqrt((pup_noevent+pdown_noevent)/sum(allres$outcomeCount==0))
+
+    results[[i]]  <- list(threshold1=threshold, threshold2=threshold2, nri = nri,
+                          z=z, z_events=z_events, z_noevents = z_noevents,
+                          outcomesTab=outcomesTab, nooutcomesTab=nooutcomesTab,
+                          pup_event=pup_event, pdown_event=pdown_event,
+                          pup_noevent=pup_noevent , pdown_noeven=pdown_noevent)
+  }
+
+  return(results)
+}
+
+#' Net reclassification improvement 2 no thresholds
+#'
+#' @description This function calculates a modified net reclassification improvement (NRI) metric comparing two models at a range of predicting tresholds (simialr to library(Hmisc))
+#' @details Users need to input a trained model (the output of runPlp()) or the output of running an existing model
+#'
+#' @param plpModel1    The object returned by runPlp() containing the trained model or the output when implementing an existing model
+#' @param plpModel2    The object returned by runPlp() containing the trained model or the output when implementing an existing model
+#' @return
+#' A list containing the NRI value and z-value (can be used for statistical significance).
+#' A positive value suggests the first model is better than the second model.  A negative values suggests the opposite.
+#'
+#' @export
+NRI2 <- function(plpModel1, plpModel2){
 
   if(!class(plpModel1)=="runPlp"){
     stop('Incorrect class for plpModel1')
@@ -59,44 +141,69 @@ NRI <- function(plpModel1, plpModel2, thresholds=seq(0,1,1/100)){
 
   allres <- merge(prediction1, prediction2)
 
-  i <- 0
-  results <- list()
-  length(results) <- length(thresholds)
-  for(threshold in thresholds){
-    i <- i+1
+  pup_event <- sum(allres$Model1[allres$outcomeCount>0]>allres$Model2[allres$outcomeCount>0])/sum(allres$outcomeCount>0)
+  pup_noevent <- sum(allres$Model1[allres$outcomeCount==0]>allres$Model2[allres$outcomeCount==0])/sum(allres$outcomeCount==0)
+  pdown_event <- sum(allres$Model1[allres$outcomeCount>0] < allres$Model2[allres$outcomeCount>0])/sum(allres$outcomeCount>0)
+  pdown_noevent <- sum(allres$Model1[allres$outcomeCount==0] < allres$Model2[allres$outcomeCount==0])/sum(allres$outcomeCount==0)
 
-    outcomesTab <- table(allres$Model1[allres$outcomeCount>=0]>=threshold,
-          allres$Model2[allres$outcomeCount>=0]>=threshold)
-    nooutcomesTab <- table(allres$Model1[allres$outcomeCount==0]>=threshold,
-                      allres$Model2[allres$outcomeCount==0]>=threshold)
+  nri <- (pup_event-pdown_event)-(pup_noevent-pdown_noevent)
 
-    pup_event <- sum(allres$Model1[allres$outcomeCount>=0]>=threshold & !allres$Model2[allres$outcomeCount>=0]>=threshold)/sum(allres$outcomeCount>=0)
-    pup_noevent <- sum(allres$Model1[allres$outcomeCount==0]>=threshold & !allres$Model2[allres$outcomeCount==0]>=threshold)/sum(allres$outcomeCount==0)
-    pdown_event <- sum(allres$Model1[allres$outcomeCount>=0]<threshold & !allres$Model2[allres$outcomeCount>=0]<threshold)/sum(allres$outcomeCount>=0)
-    pdown_noevent <- sum(allres$Model1[allres$outcomeCount==0]<threshold & !allres$Model2[allres$outcomeCount==0]<threshold)/sum(allres$outcomeCount==0)
+  z <- nri/(sqrt(((pup_event+pdown_event)/sum(allres$outcomeCount>0)) + ((pup_noevent+pdown_noevent)/sum(allres$outcomeCount==0))))
 
-    nri <- (pup_event-pdown_event)-(pup_noevent-pdown_noevent)
+  z_events <- (pup_event-pdown_event)/sqrt((pup_event+pdown_event)/sum(allres$outcomeCount>0))
+  z_noevents <- (-pup_noevent+pdown_noevent)/sqrt((pup_noevent+pdown_noevent)/sum(allres$outcomeCount==0))
 
-    z <- nri/(sqrt((pup_event+pdown_event)/sum(allres$outcomeCount>=0) + (pup_noevent+pdown_noevent)/sum(allres$outcomeCount==0)))
+  results  <- list(nri = nri,
+                   z=z, z_events=z_events, z_noevents = z_noevents,
+                   pup_event=pup_event, pdown_event=pdown_event,
+                   pup_noevent=pup_noevent , pdown_noeven=pdown_noevent)
 
-    z_events <- (pup_event-pdown_event)/sqrt((pup_event+pdown_event)/sum(allres$outcomeCount>=0))
-    z_noevents <- (-pup_noevent+pdown_noevent)/sqrt((pup_noevent+pdown_noevent)/sum(allres$outcomeCount==0))
-
-    results[[i]]  <- list(threshold=threshold, nri = nri,
-                          z=z, z_events=z_events, z_noevents = z_noevents,
-                          outcomesTab=outcomesTab, nooutcomesTab=nooutcomesTab)
-  }
 
   return(results)
+}
+
+#' Get prediction risk thresholds for quantiles
+#'
+#' @description This function calculates the net reclassification improvement (NRI) metric comparing two models at a range of predicting tresholds
+#' @details Users need to input a trained model (the output of runPlp()) or the output of running an existing model
+#'
+#' @param plpModel1    The object returned by runPlp() containing the trained model or the output when implementing an existing model
+#' @param plpModel2    The object returned by runPlp() containing the trained model or the output when implementing an existing model
+#' @param percentage   A quantile percentage (e.g., c(0.99, 0.95)) will find the threshold that only 1 percent and 5 percent of people have a risk equal to or higher than for both models
+#'
+#' @return
+#' A data.frame with each column being the risk thresholds per model and rows corresponding to the input quantiles
+#' @export
+getThresholds <- function(plpModel1, plpModel2, percentage=c(0.99,0.95, 0.9,0.5)){
+
+  ind1 <- 1:nrow(plpModel1$prediction)
+  if(!is.null(plpModel1$prediction$indexes)){
+    ind1 <- plpModel1$prediction$indexes<0
+  }
+  ind2 <- 1:nrow(plpModel2$prediction)
+  if(!is.null(plpModel2$prediction$indexes)){
+    ind2 <- plpModel2$prediction$indexes<0
+  }
+
+  prediction1 <- plpModel1$prediction[ind1,c('rowId','outcomeCount','value')]
+  colnames(prediction1)[3] <- 'Model1'
+  prediction2 <- plpModel2$prediction[ind2,c('rowId','value')]
+  colnames(prediction2)[2] <- 'Model2'
+
+  allres <- merge(prediction1, prediction2)
+
+  result <- data.frame(modelThreshold = quantile(allres$Model1, probs=percentage),
+                       model2Threshold = quantile(allres$Model2, probs=percentage)
+                       )
+
+  return(result)
 }
 
 
 #' integrated discrimination improvement- no thresholds needed (an approximation)
 #'
-#' @description
-#' This function calculates the ntegrated discrimination improvement (IDI) metric comparing two models
-#' @details
-#' Users need to input two trained models (the output of runPlp()) or the output of running an existing model
+#' @description This function calculates the ntegrated discrimination improvement (IDI) metric comparing two models
+#' @details Users need to input two trained models (the output of runPlp()) or the output of running an existing model
 #'
 #' @param plpModel1    The object returned by runPlp() containing the trained model or the output when implementing an existing model
 #' @param plpModel2    The object returned by runPlp() containing the trained model or the output when implementing an existing model
@@ -125,14 +232,17 @@ IDI <- function(plpModel1, plpModel2){
     ind2 <- plpModel2$prediction$indexes<0
   }
 
-  p1_events <- mean(plpModel1$prediction$value[plpModel1$prediction$outcomeCount>=0 & ind1])
+  p1_events <- mean(plpModel1$prediction$value[plpModel1$prediction$outcomeCount>0 & ind1])
   p1_noevents <- mean(plpModel1$prediction$value[plpModel1$prediction$outcomeCount==0 & ind1])
 
-  p2_events <- mean(plpModel2$prediction$value[plpModel2$prediction$outcomeCount>=0 & ind2])
+  p2_events <- mean(plpModel2$prediction$value[plpModel2$prediction$outcomeCount>0 & ind2])
   p2_noevents <- mean(plpModel2$prediction$value[plpModel2$prediction$outcomeCount==0 & ind2])
 
-
-  IDI <- (p1_events-p1_noevents)-(p2_events-p2_noevents)
+  increaseEvents <- p1_events-p2_events
+  decreaseNoevents <- p2_noevents-p1_noevents
+  model1Diff <- (p1_events-p1_noevents)
+  model2Diff <- (p2_events-p2_noevents)
+  IDI <- model1Diff-model2Diff
 
   prediction1 <- plpModel1$prediction[ind1,c('rowId','outcomeCount','value')]
   colnames(prediction1)[3] <- 'Model1'
@@ -140,12 +250,14 @@ IDI <- function(plpModel1, plpModel2){
   colnames(prediction2)[2] <- 'Model2'
   allres <- merge(prediction1, prediction2)
 
-  se_events <- sd(allres$Model1[allres$outcomeCount>=0]-allres$Model2[allres$outcomeCount>=0])/sqrt(sum(allres$outcomeCount>=0))
+  se_events <- sd(allres$Model1[allres$outcomeCount>0]-allres$Model2[allres$outcomeCount>0])/sqrt(sum(allres$outcomeCount>0))
   se_noevents <- sd(allres$Model1[allres$outcomeCount==0]-allres$Model2[allres$outcomeCount==0])/sqrt(sum(allres$outcomeCount==0))
 
   z <- IDI/sqrt(se_events^2+se_noevents^2)
 
-  return(list(IDI=IDI, z=z))
+  return(list(IDI=IDI, z=z, model1Diff=model1Diff, model2Diff=model2Diff,
+              increaseEvents=increaseEvents,
+              decreaseNoevents=decreaseNoevents))
 }
 
 #' multiple integrated discrimination improvement

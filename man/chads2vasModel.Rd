@@ -25,6 +25,8 @@ chads2vasModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 
 \item{outcomeId}{An iteger specifying the cohort id for the outcome cohorts}
 
+\item{oracleTempSchema}{The temp schema require is using oracle}
+
 \item{removePriorOutcome}{Remove people with prior outcomes from the target population}
 }
 \value{

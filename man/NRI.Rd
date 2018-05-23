@@ -4,7 +4,8 @@
 \alias{NRI}
 \title{Net reclassification improvement}
 \usage{
-NRI(plpModel1, plpModel2, thresholds = seq(0, 1, 1/100))
+NRI(plpModel1, plpModel2, thresholds = seq(0, 1, 1/100),
+  secondThresholds = NULL)
 }
 \arguments{
 \item{plpModel1}{The object returned by runPlp() containing the trained model or the output when implementing an existing model}
@@ -12,6 +13,8 @@ NRI(plpModel1, plpModel2, thresholds = seq(0, 1, 1/100))
 \item{plpModel2}{The object returned by runPlp() containing the trained model or the output when implementing an existing model}
 
 \item{thresholds}{A sequence of predicting tresholds to calcuate the NRI at each of these tresholds}
+
+\item{secondThresholds}{A sequence of predicting tresholds to calcuate the NRI at each of these tresholds for the second model (if NULL uses thresholds)}
 }
 \value{
 A list containing the NRI value and z-value (can be used for statistical significance) plus various values used to calculate the

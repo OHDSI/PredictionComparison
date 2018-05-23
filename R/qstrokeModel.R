@@ -12,7 +12,7 @@
 #' @param outcomeTable        A string specifying the table containing the outcome cohort
 #' @param cohortId             An iteger specifying the cohort id for the target population cohorts
 #' @param outcomeId          An iteger specifying the cohort id for the outcome cohorts
-#' @param oracleTempSchema
+#' @param oracleTempSchema   The temp schema require is using oracle
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
 #'
 #' @return

@@ -21,6 +21,8 @@ Imports:
     ffbase (>= 0.12.1)
 Suggests:
   testthat,
+  Hmisc,
+  nricens
 LinkingTo: Rcpp
 NeedsCompilation: No
 RoxygenNote: 6.0.1

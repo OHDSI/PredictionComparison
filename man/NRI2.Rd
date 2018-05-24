@@ -4,12 +4,14 @@
 \alias{NRI2}
 \title{Net reclassification improvement 2 no thresholds}
 \usage{
-NRI2(plpModel1, plpModel2)
+NRI2(plpModel1, plpModel2, minOutcomes = 5)
 }
 \arguments{
 \item{plpModel1}{The object returned by runPlp() containing the trained model or the output when implementing an existing model}
 
 \item{plpModel2}{The object returned by runPlp() containing the trained model or the output when implementing an existing model}
+
+\item{minOutcomes}{Must be this number of outcomes minimum for comparison}
 }
 \value{
 A list containing the NRI value and z-value (can be used for statistical significance).

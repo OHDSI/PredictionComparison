@@ -19,13 +19,15 @@ x1 <- runif(1000)
 x2 <- runif(1000)
 y <- sample(0:1, 1000, TRUE)
 model1 <- list(prediction=data.frame(rowId=1:1000,
+                                     subjectId=1:1000,
+                                     cohortStartDate=rep('2010-01-01',1000),
                                      value=x1,
                                      outcomeCount=y))
-class(model1) <- 'runPlp'
 model2 <- list(prediction=data.frame(rowId=1:1000,
+                                     subjectId=1:1000,
+                                     cohortStartDate=rep('2010-01-01',1000),
                                      value=x2,
                                      outcomeCount=y))
-class(model2) <- 'runPlp'
 
 
 context("Performance Measures")

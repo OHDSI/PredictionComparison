@@ -34,11 +34,11 @@
 #' @export
 NRI <- function(plpModel1, plpModel2, thresholds=seq(0,1,1/100), secondThresholds=NULL){
 
-  if(!class(plpModel1)=="runPlp"){
-    stop('Incorrect class for plpModel1')
+  if(is.null(plpModel1$prediction)){
+    stop('No prediction object first input')
   }
-  if(!class(plpModel2)=="runPlp"){
-    stop('Incorrect class for plpModel1')
+  if(is.null(plpModel2$prediction)){
+    stop('No prediction object in second input')
   }
   if(nrow(plpModel1$prediction)!=nrow(plpModel2$prediction)){
     warning('Model predictions are different sizes')
@@ -61,12 +61,17 @@ NRI <- function(plpModel1, plpModel2, thresholds=seq(0,1,1/100), secondThreshold
     ind2 <- plpModel2$prediction$indexes<0
   }
 
-  prediction1 <- plpModel1$prediction[ind1,c('rowId','outcomeCount','value')]
-  colnames(prediction1)[3] <- 'Model1'
-  prediction2 <- plpModel2$prediction[ind2,c('rowId','value')]
-  colnames(prediction2)[2] <- 'Model2'
+  prediction1 <- plpModel1$prediction[ind1,c('subjectId','cohortStartDate','outcomeCount','value')]
+  colnames(prediction1)[4] <- 'Model1'
+  prediction2 <- plpModel2$prediction[ind2,c('subjectId','cohortStartDate','value')]
+  colnames(prediction2)[3] <- 'Model2'
 
-  allres <- merge(prediction1, prediction2)
+  allres <- merge(prediction1, prediction2,
+                  by=c('subjectId','cohortStartDate'))
+
+  if(nrow(allres)==0){
+    stop('No subjectId and cohortStartDate in common')
+  }
 
   results <- list()
   length(results) <- length(thresholds)
@@ -108,18 +113,19 @@ NRI <- function(plpModel1, plpModel2, thresholds=seq(0,1,1/100), secondThreshold
 #'
 #' @param plpModel1    The object returned by runPlp() containing the trained model or the output when implementing an existing model
 #' @param plpModel2    The object returned by runPlp() containing the trained model or the output when implementing an existing model
+#' @param minOutcomes  Must be this number of outcomes minimum for comparison
 #' @return
 #' A list containing the NRI value and z-value (can be used for statistical significance).
 #' A positive value suggests the first model is better than the second model.  A negative values suggests the opposite.
 #'
 #' @export
-NRI2 <- function(plpModel1, plpModel2){
+NRI2 <- function(plpModel1, plpModel2, minOutcomes=5){
 
-  if(!class(plpModel1)=="runPlp"){
-    stop('Incorrect class for plpModel1')
+  if(is.null(plpModel1$prediction)){
+    stop('No prediction object first input')
   }
-  if(!class(plpModel2)=="runPlp"){
-    stop('Incorrect class for plpModel1')
+  if(is.null(plpModel2$prediction)){
+    stop('No prediction object in second input')
   }
   if(nrow(plpModel1$prediction)!=nrow(plpModel2$prediction)){
     warning('Model predictions are different sizes')
@@ -134,12 +140,21 @@ NRI2 <- function(plpModel1, plpModel2){
     ind2 <- plpModel2$prediction$indexes<0
   }
 
-  prediction1 <- plpModel1$prediction[ind1,c('rowId','outcomeCount','value')]
-  colnames(prediction1)[3] <- 'Model1'
-  prediction2 <- plpModel2$prediction[ind2,c('rowId','value')]
-  colnames(prediction2)[2] <- 'Model2'
+  prediction1 <- plpModel1$prediction[ind1,c('subjectId','cohortStartDate','outcomeCount','value')]
+  colnames(prediction1)[4] <- 'Model1'
+  prediction2 <- plpModel2$prediction[ind2,c('subjectId','cohortStartDate','value')]
+  colnames(prediction2)[3] <- 'Model2'
 
-  allres <- merge(prediction1, prediction2)
+  allres <- merge(prediction1, prediction2,
+                  by=c('subjectId','cohortStartDate'))
+
+  if(nrow(allres)==0){
+    stop('No subjectId and cohortStartDate in common')
+  }
+
+  if(sum(allres$outcomeCount>0)< minOutcomes){
+    stop('Less outcomes that minOutcomes')
+  }
 
   pup_event <- sum(allres$Model1[allres$outcomeCount>0]>allres$Model2[allres$outcomeCount>0])/sum(allres$outcomeCount>0)
   pup_noevent <- sum(allres$Model1[allres$outcomeCount==0]>allres$Model2[allres$outcomeCount==0])/sum(allres$outcomeCount==0)
@@ -185,12 +200,17 @@ getThresholds <- function(plpModel1, plpModel2, percentage=c(0.99,0.95, 0.9,0.5)
     ind2 <- plpModel2$prediction$indexes<0
   }
 
-  prediction1 <- plpModel1$prediction[ind1,c('rowId','outcomeCount','value')]
-  colnames(prediction1)[3] <- 'Model1'
-  prediction2 <- plpModel2$prediction[ind2,c('rowId','value')]
-  colnames(prediction2)[2] <- 'Model2'
+  prediction1 <- plpModel1$prediction[ind1,c('subjectId','cohortStartDate','outcomeCount','value')]
+  colnames(prediction1)[4] <- 'Model1'
+  prediction2 <- plpModel2$prediction[ind2,c('subjectId','cohortStartDate','value')]
+  colnames(prediction2)[3] <- 'Model2'
 
-  allres <- merge(prediction1, prediction2)
+  allres <- merge(prediction1, prediction2,
+                  by=c('subjectId','cohortStartDate'))
+
+  if(nrow(allres)==0){
+    stop('No subjectId and cohortStartDate in common')
+  }
 
   result <- data.frame(modelThreshold = quantile(allres$Model1, probs=percentage),
                        model2Threshold = quantile(allres$Model2, probs=percentage)
@@ -203,7 +223,7 @@ getThresholds <- function(plpModel1, plpModel2, percentage=c(0.99,0.95, 0.9,0.5)
 #' integrated discrimination improvement- no thresholds needed (an approximation)
 #'
 #' @description This function calculates the ntegrated discrimination improvement (IDI) metric comparing two models
-#' @details Users need to input two trained models (the output of runPlp()) or the output of running an existing model
+#' @details Users need to input two trained models (the output of runPlp()) or the output of running an existing model where the plpData used was the same
 #'
 #' @param plpModel1    The object returned by runPlp() containing the trained model or the output when implementing an existing model
 #' @param plpModel2    The object returned by runPlp() containing the trained model or the output when implementing an existing model
@@ -213,11 +233,11 @@ getThresholds <- function(plpModel1, plpModel2, percentage=c(0.99,0.95, 0.9,0.5)
 #' @export
 IDI <- function(plpModel1, plpModel2){
 
-  if(!class(plpModel1)=="runPlp"){
-    stop('Incorrect class for plpModel1')
+  if(is.null(plpModel1$prediction)){
+    stop('No prediction object first input')
   }
-  if(!class(plpModel2)=="runPlp"){
-    stop('Incorrect class for plpModel1')
+  if(is.null(plpModel2$prediction)){
+    stop('No prediction object in second input')
   }
   if(nrow(plpModel1$prediction)!=nrow(plpModel2$prediction)){
     warning('Model predictions are different sizes')
@@ -232,23 +252,29 @@ IDI <- function(plpModel1, plpModel2){
     ind2 <- plpModel2$prediction$indexes<0
   }
 
-  p1_events <- mean(plpModel1$prediction$value[plpModel1$prediction$outcomeCount>0 & ind1])
-  p1_noevents <- mean(plpModel1$prediction$value[plpModel1$prediction$outcomeCount==0 & ind1])
+  prediction1 <- plpModel1$prediction[ind1,c('subjectId','cohortStartDate','outcomeCount','value')]
+  colnames(prediction1)[4] <- 'Model1'
+  prediction2 <- plpModel2$prediction[ind2,c('subjectId','cohortStartDate','value')]
+  colnames(prediction2)[3] <- 'Model2'
 
-  p2_events <- mean(plpModel2$prediction$value[plpModel2$prediction$outcomeCount>0 & ind2])
-  p2_noevents <- mean(plpModel2$prediction$value[plpModel2$prediction$outcomeCount==0 & ind2])
+  allres <- merge(prediction1, prediction2,
+                  by=c('subjectId','cohortStartDate'))
+
+  if(nrow(allres)==0){
+    stop('No subjectId and cohortStartDate in common')
+  }
+
+  p1_events <- mean(allres$Model1[allres$outcomeCount>0])
+  p1_noevents <- mean(allres$Model1[allres$outcomeCount==0])
+
+  p2_events <- mean(allres$Model2[allres$outcomeCount>0])
+  p2_noevents <- mean(allres$Model2[allres$outcomeCount==0])
 
   increaseEvents <- p1_events-p2_events
   decreaseNoevents <- p2_noevents-p1_noevents
   model1Diff <- (p1_events-p1_noevents)
   model2Diff <- (p2_events-p2_noevents)
   IDI <- model1Diff-model2Diff
-
-  prediction1 <- plpModel1$prediction[ind1,c('rowId','outcomeCount','value')]
-  colnames(prediction1)[3] <- 'Model1'
-  prediction2 <- plpModel2$prediction[ind2,c('rowId','value')]
-  colnames(prediction2)[2] <- 'Model2'
-  allres <- merge(prediction1, prediction2)
 
   se_events <- sd(allres$Model1[allres$outcomeCount>0]-allres$Model2[allres$outcomeCount>0])/sqrt(sum(allres$outcomeCount>0))
   se_noevents <- sd(allres$Model1[allres$outcomeCount==0]-allres$Model2[allres$outcomeCount==0])/sqrt(sum(allres$outcomeCount==0))

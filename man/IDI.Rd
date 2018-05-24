@@ -18,5 +18,5 @@ A list containing the IDI value and z-value (can be used for statistical signifi
 This function calculates the ntegrated discrimination improvement (IDI) metric comparing two models
 }
 \details{
-Users need to input two trained models (the output of runPlp()) or the output of running an existing model
+Users need to input two trained models (the output of runPlp()) or the output of running an existing model where the plpData used was the same
 }

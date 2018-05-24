@@ -6,7 +6,9 @@
 \usage{
 chads2Model(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
   outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
-  oracleTempSchema = NULL, removePriorOutcome = T)
+  oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
+  requireTimeAtRisk = T, minTimeAtRisk = 364, includeAllOutcomes = T,
+  firstExposureOnly = F, removePriorOutcome = T)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}
@@ -26,6 +28,18 @@ chads2Model(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 \item{outcomeId}{An iteger specifying the cohort id for the outcome cohorts}
 
 \item{oracleTempSchema}{The temp schema require is using oracle}
+
+\item{riskWindowStart}{The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
+
+\item{riskWindowEnd}{The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
+
+\item{requireTimeAtRisk}{Require a minimum number of days observed in the time at risk period?}
+
+\item{minTimeAtRisk}{If requireTimeAtRisk is true, the minimum number of days at risk}
+
+\item{includeAllOutcomes}{Whether to include people with outcome who do not satify the minTimeAtRisk}
+
+\item{firstExposureOnly}{Whether to restrict to first target cohort start date if people are in target popualtion multiple times}
 
 \item{removePriorOutcome}{Remove people with prior outcomes from the target population}
 }

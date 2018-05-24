@@ -13,6 +13,11 @@
 #' @param cohortId             An iteger specifying the cohort id for the target population cohorts
 #' @param outcomeId          An iteger specifying the cohort id for the outcome cohorts
 #' @param oracleTempSchema    The temp schema require is using oracle
+#' @param riskWindowStart    The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date
+#' @param riskWindowEnd      The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date
+#' @param requireTimeAtRisk  Require a minimum number of days observed in the time at risk period?
+#' @param minTimeAtRisk      If requireTimeAtRisk is true, the minimum number of days at risk
+#' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
 #'
 #' @return
@@ -28,6 +33,11 @@ hasBledModel <- function(connectionDetails,
                     cohortId,
                     outcomeId,
                     oracleTempSchema=NULL,
+                    riskWindowStart = 1,
+                    riskWindowEnd = 365,
+                    requireTimeAtRisk = T,
+                    minTimeAtRisk = 364,
+                    includeAllOutcomes = T,
                     removePriorOutcome=T){
 
   #input checks...
@@ -79,11 +89,11 @@ result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                               interceptTable = NULL,
                                               type = 'score',
                                               covariateSettings = covariateSettings,
-                                              riskWindowStart = 1,
-                                              riskWindowEnd = 365,
-                                              requireTimeAtRisk = T,
-                                              minTimeAtRisk = 364,
-                                              includeAllOutcomes = T,
+                                              riskWindowStart = riskWindowStart,
+                                              riskWindowEnd = riskWindowEnd,
+                                              requireTimeAtRisk = requireTimeAtRisk,
+                                              minTimeAtRisk = minTimeAtRisk,
+                                              includeAllOutcomes = includeAllOutcomes,
                                               removeSubjectsWithPriorOutcome =removePriorOutcome,
                                               connectionDetails = connectionDetails,
                                               cdmDatabaseSchema = cdmDatabaseSchema,

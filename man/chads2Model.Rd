@@ -8,7 +8,8 @@ chads2Model(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
   outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
   oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
   requireTimeAtRisk = T, minTimeAtRisk = 364, includeAllOutcomes = T,
-  firstExposureOnly = F, removePriorOutcome = T)
+  firstExposureOnly = F, removePriorOutcome = T,
+  calibrationPopulation = NULL)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}
@@ -42,6 +43,8 @@ chads2Model(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 \item{firstExposureOnly}{Whether to restrict to first target cohort start date if people are in target popualtion multiple times}
 
 \item{removePriorOutcome}{Remove people with prior outcomes from the target population}
+
+\item{calibrationPopulation}{A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data}
 }
 \value{
 A list containing the model performance and the personal predictions for each subject in the target population

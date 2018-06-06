@@ -19,6 +19,7 @@
 #' @param minTimeAtRisk      If requireTimeAtRisk is true, the minimum number of days at risk
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
+#' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
 #'
 #' @return
 #' A list containing the model performance and the personal predictions for each subject in the target population
@@ -38,7 +39,8 @@ hasBledModel <- function(connectionDetails,
                     requireTimeAtRisk = T,
                     minTimeAtRisk = 364,
                     includeAllOutcomes = T,
-                    removePriorOutcome=T){
+                    removePriorOutcome=T,
+                    calibrationPopulation=NULL){
 
   #input checks...
   if(missing(connectionDetails))
@@ -57,7 +59,12 @@ hasBledModel <- function(connectionDetails,
     stop('Need to enter cohortId')
   if(missing(outcomeId))
     stop('Need to enter outcomeId')
-
+  if(!is.null(calibrationPopulation)){
+    if(sum(c('subjectId','cohortStartDate','indexes')%in%colnames(calibrationPopulation))!=3){
+      stop("Need 'subjectId','cohortStartDate','indexes' in data.frame")
+    }
+    calibrationPopulation <- calibrationPopulation[,c('subjectId','cohortStartDate','indexes')]
+  }
   conceptSets <- system.file("extdata", "conceptSets.csv", package = "PredictionComparison")
   conceptSets <- read.csv(conceptSets)
 
@@ -102,7 +109,8 @@ result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                               cohortId = cohortId,
                                               outcomeDatabaseSchema = outcomeDatabaseSchema,
                                               outcomeTable = outcomeTable,
-                                              outcomeId = outcomeId)
+                                              outcomeId = outcomeId,
+                                              calibrationPopulation=calibrationPopulation)
 
 inputSetting <- list(connectionDetails=connectionDetails,
                      cdmDatabaseSchema=cdmDatabaseSchema,

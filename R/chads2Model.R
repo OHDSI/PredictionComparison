@@ -20,6 +20,7 @@
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param firstExposureOnly   Whether to restrict to first target cohort start date if people are in target popualtion multiple times
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
+#' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
 #'
 #' @return
 #' A list containing the model performance and the personal predictions for each subject in the target population
@@ -40,7 +41,8 @@ chads2Model <- function(connectionDetails,
                     minTimeAtRisk = 364,
                     includeAllOutcomes = T,
                     firstExposureOnly = F,
-                    removePriorOutcome=T){
+                    removePriorOutcome=T,
+                    calibrationPopulation=NULL){
 
   #input checks...
   if(missing(connectionDetails))
@@ -59,7 +61,12 @@ chads2Model <- function(connectionDetails,
     stop('Need to enter cohortId')
   if(missing(outcomeId))
     stop('Need to enter outcomeId')
-
+  if(!is.null(calibrationPopulation)){
+    if(sum(c('subjectId','cohortStartDate','indexes')%in%colnames(calibrationPopulation))!=3){
+      stop("Need 'subjectId','cohortStartDate','indexes' in data.frame")
+    }
+    calibrationPopulation <- calibrationPopulation[,c('subjectId','cohortStartDate','indexes')]
+  }
  # modelTable <- data.frame(modelId=1,
 #                           modelCovariateId=1,
 #                           coefficientValue=1)
@@ -92,9 +99,23 @@ population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             removeSubjectsWithPriorOutcome =removePriorOutcome)
 
 prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
-colnames(prediction)[colnames(prediction)=='covariateValue'] <- 'value'
-prediction$value[is.na(prediction$value)] <- 0
-prediction$value <- prediction$value/max(prediction$value)
+
+if(!is.null(calibrationPopulation)){
+  #re-calibrate model:
+  prediction <- base::merge(calibrationPopulation, prediction, by=c('subjectId','cohortStartDate'))
+  recalModel <- stats::glm(y ~ x,
+                           family=stats::binomial(link='logit'),
+                           data=data.frame(x=prediction$covariateValue,
+                                           y=as.factor(prediction$outcomeCount))[prediction$indexes>0,])
+  value <- stats::predict(recalModel, data.frame(x=prediction$covariateValue),
+                          type = "response")
+  prediction$value <- value
+} else {
+  colnames(prediction)[colnames(prediction)=='covariateValue'] <- 'value'
+  prediction$value[is.na(prediction$value)] <- 0
+  prediction$value <- prediction$value/max(prediction$value)
+}
+
 attr(prediction, "metaData")$predictionType <- 'binary'
 performance <- PatientLevelPrediction::evaluatePlp(prediction = prediction, plpData = plpData)
 # reformatting the performance

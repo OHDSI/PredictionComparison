@@ -130,6 +130,9 @@ on a.person_id=b.subject_id
 where datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=60
 ")
 
+  cust$sql <- SqlRender::translateSql(sql = as.character(cust$sql),
+                                      targetDialect = connectionDetails$dbms)$sql
+
   result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                                           covariateTable = conceptSets[,c('modelCovariateId','covariateId')],
                                                           interceptTable = NULL,

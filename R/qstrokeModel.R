@@ -97,6 +97,9 @@ inner join
 (select row_id from @targetCovariateTable where covariate_id=21600381412) b
 on a.row_id=b.row_id")
 
+  cust$sql <- SqlRender::translateSql(sql = as.character(cust$sql),
+                                      targetDialect = connectionDetails$dbms)$sql
+
   result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                                           covariateTable = conceptSets[,c('modelCovariateId','covariateId')],
                                                           interceptTable = NULL,

@@ -127,7 +127,7 @@ then -9 else
 -10 end as covariate_id,  1 as covariate_value
 from @cdmDatabaseSchema.person a inner join @cohortTable b
 on a.person_id=b.subject_id
-where datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=60
+where datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=60;
 ")
 
   cust$sql <- SqlRender::translateSql(sql = as.character(cust$sql),

@@ -89,45 +89,45 @@ framinghamModel <- function(connectionDetails,
 select distinct b.@rowIdField as row_id,
 case
 when
-datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=60
-and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=62
+DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=60* 365.25
+and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=62* 365.25
 then -1
 when
-datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=63
-and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=66
+DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=63* 365.25
+and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=66* 365.25
 then -2
 when
-datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=67
-                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=71
+DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=67* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=71* 365.25
 then -3
 when
-datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=72
-                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=74
+DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=72* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=74* 365.25
 then -4
 when
-datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=75
-                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=77
+DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=75* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=77* 365.25
 then -5
 when
-datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=78
-                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=81
+DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=78* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=81* 365.25
 then -6
 when
-datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=82
-                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=85
+DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=82* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=85* 365.25
 then -7
 when
-datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=86
-                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=90
+DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=86* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=90* 365.25
 then -8
 when
-datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=91
-                     and datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date) <=93
+DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=91* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=93* 365.25
 then -9 else
 -10 end as covariate_id,  1 as covariate_value
 from @cdmDatabaseSchema.person a inner join @cohortTable b
 on a.person_id=b.subject_id
-where datediff(year, datefromparts(a.year_of_birth, isnull(a.month_of_birth,1),1), b.cohort_start_date)>=60;
+where DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=60* 365.25;
 ")
 
   cust$sql <- SqlRender::translateSql(sql = as.character(cust$sql),

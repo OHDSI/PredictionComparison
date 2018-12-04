@@ -21,6 +21,7 @@
 #' @param firstExposureOnly   Whether to restrict to first target cohort start date if people are in target popualtion multiple times
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
 #' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
+#' @param addExposureDaysToEnd Add the length of exposure the risk window?
 #'
 #' @return
 #' A list containing the model performance and the personal predictions for each subject in the target population
@@ -42,7 +43,8 @@ chads2vasModel <- function(connectionDetails,
                     includeAllOutcomes = T,
                     firstExposureOnly=F,
                     removePriorOutcome=T,
-                    calibrationPopulation=NULL){
+                    calibrationPopulation=NULL,
+                    addExposureDaysToEnd = F){
 
   #input checks...
   if(missing(connectionDetails))
@@ -94,7 +96,8 @@ population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             minTimeAtRisk = minTimeAtRisk,
                                                             includeAllOutcomes = includeAllOutcomes,
                                                             firstExposureOnly = firstExposureOnly,
-                                                            removeSubjectsWithPriorOutcome =removePriorOutcome)
+                                                            removeSubjectsWithPriorOutcome =removePriorOutcome,
+                                                            addExposureDaysToEnd = addExposureDaysToEnd)
 
 prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
 if(!is.null(calibrationPopulation)){

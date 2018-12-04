@@ -20,6 +20,7 @@
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
 #' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
+#' @param addExposureDaysToEnd Add the length of exposure the risk window?
 #' @return
 #' A list containing the model performance and the personal predictions for each subject in the target population
 #'
@@ -39,7 +40,8 @@ atriaModel <- function(connectionDetails,
                     minTimeAtRisk = 364,
                     includeAllOutcomes = T,
                     removePriorOutcome=T,
-                    calibrationPopulation=NULL){
+                    calibrationPopulation=NULL,
+                    addExposureDaysToEnd = F){
 
   #input checks...
   if(missing(connectionDetails))
@@ -114,7 +116,8 @@ atriaModel <- function(connectionDetails,
                                                           outcomeDatabaseSchema = outcomeDatabaseSchema,
                                                           outcomeTable = outcomeTable,
                                                           outcomeId = outcomeId,
-                                                          calibrationPopulation=calibrationPopulation)
+                                                          calibrationPopulation=calibrationPopulation,
+                                                          addExposureDaysToEnd= addExposureDaysToEnd)
 
   inputSetting <- list(connectionDetails=connectionDetails,
                        cdmDatabaseSchema=cdmDatabaseSchema,

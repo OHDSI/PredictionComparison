@@ -1,7 +1,7 @@
-#' Apply the existing model CHADs2 using the standardised framework
+#' Apply the existing model HFRS (Hospital Frailty Risk Score) using the standardised framework
 #'
 #' @details
-#' This function applies CHADs2 to a target cohort and validates the performance
+#' This function applies HFRS to a target cohort and validates the performance
 # using the outcome cohort
 #'
 #' @param connectionDetails                The connection details for extracting the data
@@ -27,24 +27,24 @@
 #' A list containing the model performance and the personal predictions for each subject in the target population
 #'
 #' @export
-chads2Model <- function(connectionDetails,
-                    cdmDatabaseSchema,
-                    cohortDatabaseSchema,
-                    outcomeDatabaseSchema,
-                    cohortTable,
-                    outcomeTable,
-                    cohortId,
-                    outcomeId,
-                    oracleTempSchema=NULL,
-                    riskWindowStart = 1,
-                    riskWindowEnd = 365,
-                    requireTimeAtRisk = T,
-                    minTimeAtRisk = 364,
-                    includeAllOutcomes = T,
-                    firstExposureOnly = F,
-                    removePriorOutcome=T,
-                    calibrationPopulation=NULL,
-                    addExposureDaysToEnd=F ){
+hfrsModel   <- function(connectionDetails,
+                        cdmDatabaseSchema,
+                        cohortDatabaseSchema,
+                        outcomeDatabaseSchema,
+                        cohortTable,
+                        outcomeTable,
+                        cohortId,
+                        outcomeId,
+                        oracleTempSchema=NULL,
+                        riskWindowStart = 1,
+                        riskWindowEnd = 365,
+                        requireTimeAtRisk = T,
+                        minTimeAtRisk = 364,
+                        includeAllOutcomes = T,
+                        firstExposureOnly = F,
+                        removePriorOutcome=T,
+                        calibrationPopulation=NULL,
+                        addExposureDaysToEnd = F){
 
   #input checks...
   if(missing(connectionDetails))
@@ -69,25 +69,25 @@ chads2Model <- function(connectionDetails,
     }
     calibrationPopulation <- calibrationPopulation[,c('subjectId','cohortStartDate','indexes')]
   }
- # modelTable <- data.frame(modelId=1,
+  # modelTable <- data.frame(modelId=1,
   #                           modelCovariateId=1,
   #                           coefficientValue=1)
   #  covariateTable <- data.frame(modelCovariateId=1,
   #                               covariateId=1903)
 
   # use history anytime prior by setting long term look back to 9999
-  covariateSettings <- FeatureExtraction::createCovariateSettings(useChads2 = T)
+  covariateSettings <- FeatureExtraction::createCovariateSettings(useHfrs = T)
 
   plpData <- PatientLevelPrediction::getPlpData(connectionDetails = connectionDetails,
-                                     cdmDatabaseSchema = cdmDatabaseSchema,
-                                     oracleTempSchema =  oracleTempSchema,
-                                     cohortId = cohortId, outcomeIds = outcomeId,
-                                     cohortDatabaseSchema = cohortDatabaseSchema,
-                                     cohortTable = cohortTable,
-                                     outcomeDatabaseSchema = outcomeDatabaseSchema,
-                                     outcomeTable = outcomeTable, cdmVersion = 5,
-                                     sampleSize = NULL, covariateSettings = covariateSettings
-                                     )
+                                                cdmDatabaseSchema = cdmDatabaseSchema,
+                                                oracleTempSchema =  oracleTempSchema,
+                                                cohortId = cohortId, outcomeIds = outcomeId,
+                                                cohortDatabaseSchema = cohortDatabaseSchema,
+                                                cohortTable = cohortTable,
+                                                outcomeDatabaseSchema = outcomeDatabaseSchema,
+                                                outcomeTable = outcomeTable, cdmVersion = 5,
+                                                sampleSize = NULL, covariateSettings = covariateSettings
+  )
 
   population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                               outcomeId = outcomeId,
@@ -99,7 +99,7 @@ chads2Model <- function(connectionDetails,
                                                               includeAllOutcomes = includeAllOutcomes,
                                                               firstExposureOnly = firstExposureOnly,
                                                               removeSubjectsWithPriorOutcome =removePriorOutcome,
-                                                              addExposureDaysToEnd = addExposureDaysToEnd)
+                                                              addExposureDaysToEnd= addExposureDaysToEnd)
 
   prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
 
@@ -149,14 +149,14 @@ chads2Model <- function(connectionDetails,
                                               performance$predictionDistribution)
 
   inputSetting <- list(connectionDetails=connectionDetails,
-                        cdmDatabaseSchema=cdmDatabaseSchema,
-                        cohortDatabaseSchema=cohortDatabaseSchema,
-                        outcomeDatabaseSchema=outcomeDatabaseSchema,
-                        cohortTable=cohortTable,
-                        outcomeTable=outcomeTable,
-                        cohortId=cohortId,
-                        outcomeId=outcomeId,
-                        oracleTempSchema=oracleTempSchema)
+                       cdmDatabaseSchema=cdmDatabaseSchema,
+                       cohortDatabaseSchema=cohortDatabaseSchema,
+                       outcomeDatabaseSchema=outcomeDatabaseSchema,
+                       cohortTable=cohortTable,
+                       outcomeTable=outcomeTable,
+                       cohortId=cohortId,
+                       outcomeId=outcomeId,
+                       oracleTempSchema=oracleTempSchema)
   result <- list(model=list(model='chads2'),
                  analysisRef ='000000',
                  inputSetting =inputSetting,
@@ -167,4 +167,4 @@ chads2Model <- function(connectionDetails,
   attr(result$model, "type")<- 'existing model'
   class(result) <- 'runPlp'
   return(result)
-  }
+}

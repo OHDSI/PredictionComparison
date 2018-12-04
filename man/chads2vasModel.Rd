@@ -9,7 +9,7 @@ chads2vasModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
   oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
   requireTimeAtRisk = T, minTimeAtRisk = 364, includeAllOutcomes = T,
   firstExposureOnly = F, removePriorOutcome = T,
-  calibrationPopulation = NULL)
+  calibrationPopulation = NULL, addExposureDaysToEnd = F)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}
@@ -45,6 +45,8 @@ chads2vasModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 \item{removePriorOutcome}{Remove people with prior outcomes from the target population}
 
 \item{calibrationPopulation}{A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data}
+
+\item{addExposureDaysToEnd}{Add the length of exposure the risk window?}
 }
 \value{
 A list containing the model performance and the personal predictions for each subject in the target population

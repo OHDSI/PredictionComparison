@@ -21,6 +21,7 @@
 #' @param firstExposureOnly   Whether to restrict to first target cohort start date if people are in target popualtion multiple times
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
 #' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
+#' @param addExposureDaysToEnd Add the length of exposure the risk window?
 #'
 #' @return
 #' A list containing the model performance and the personal predictions for each subject in the target population
@@ -42,7 +43,8 @@ chads2Model <- function(connectionDetails,
                     includeAllOutcomes = T,
                     firstExposureOnly = F,
                     removePriorOutcome=T,
-                    calibrationPopulation=NULL){
+                    calibrationPopulation=NULL,
+                    addExposureDaysToEnd=F ){
 
   #input checks...
   if(missing(connectionDetails))
@@ -68,100 +70,101 @@ chads2Model <- function(connectionDetails,
     calibrationPopulation <- calibrationPopulation[,c('subjectId','cohortStartDate','indexes')]
   }
  # modelTable <- data.frame(modelId=1,
-#                           modelCovariateId=1,
-#                           coefficientValue=1)
-#  covariateTable <- data.frame(modelCovariateId=1,
-#                               covariateId=1903)
+  #                           modelCovariateId=1,
+  #                           coefficientValue=1)
+  #  covariateTable <- data.frame(modelCovariateId=1,
+  #                               covariateId=1903)
 
-# use history anytime prior by setting long term look back to 9999
-covariateSettings <- FeatureExtraction::createCovariateSettings(useChads2 = T)
+  # use history anytime prior by setting long term look back to 9999
+  covariateSettings <- FeatureExtraction::createCovariateSettings(useChads2 = T)
 
-plpData <- PatientLevelPrediction::getPlpData(connectionDetails = connectionDetails,
-                                   cdmDatabaseSchema = cdmDatabaseSchema,
-                                   oracleTempSchema =  oracleTempSchema,
-                                   cohortId = cohortId, outcomeIds = outcomeId,
-                                   cohortDatabaseSchema = cohortDatabaseSchema,
-                                   cohortTable = cohortTable,
-                                   outcomeDatabaseSchema = outcomeDatabaseSchema,
-                                   outcomeTable = outcomeTable, cdmVersion = 5,
-                                   sampleSize = NULL, covariateSettings = covariateSettings
-                                   )
+  plpData <- PatientLevelPrediction::getPlpData(connectionDetails = connectionDetails,
+                                     cdmDatabaseSchema = cdmDatabaseSchema,
+                                     oracleTempSchema =  oracleTempSchema,
+                                     cohortId = cohortId, outcomeIds = outcomeId,
+                                     cohortDatabaseSchema = cohortDatabaseSchema,
+                                     cohortTable = cohortTable,
+                                     outcomeDatabaseSchema = outcomeDatabaseSchema,
+                                     outcomeTable = outcomeTable, cdmVersion = 5,
+                                     sampleSize = NULL, covariateSettings = covariateSettings
+                                     )
 
-population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
-                                                            outcomeId = outcomeId,
-                                                            binary = T,
-                                                            riskWindowStart = riskWindowStart,
-                                                            riskWindowEnd = riskWindowEnd,
-                                                            requireTimeAtRisk = requireTimeAtRisk,
-                                                            minTimeAtRisk = minTimeAtRisk,
-                                                            includeAllOutcomes = includeAllOutcomes,
-                                                            firstExposureOnly = firstExposureOnly,
-                                                            removeSubjectsWithPriorOutcome =removePriorOutcome)
+  population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
+                                                              outcomeId = outcomeId,
+                                                              binary = T,
+                                                              riskWindowStart = riskWindowStart,
+                                                              riskWindowEnd = riskWindowEnd,
+                                                              requireTimeAtRisk = requireTimeAtRisk,
+                                                              minTimeAtRisk = minTimeAtRisk,
+                                                              includeAllOutcomes = includeAllOutcomes,
+                                                              firstExposureOnly = firstExposureOnly,
+                                                              removeSubjectsWithPriorOutcome =removePriorOutcome,
+                                                              addExposureDaysToEnd = addExposureDaysToEnd)
 
-prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
+  prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
 
-if(!is.null(calibrationPopulation)){
-  #re-calibrate model:
-  prediction <- base::merge(calibrationPopulation, prediction, by=c('subjectId','cohortStartDate'))
-  recalModel <- stats::glm(y ~ x,
-                           family=stats::binomial(link='logit'),
-                           data=data.frame(x=prediction$covariateValue,
-                                           y=as.factor(prediction$outcomeCount))[prediction$indexes>0,])
-  value <- stats::predict(recalModel, data.frame(x=prediction$covariateValue),
-                          type = "response")
-  prediction$value <- value
-} else {
-  colnames(prediction)[colnames(prediction)=='covariateValue'] <- 'value'
-  prediction$value[is.na(prediction$value)] <- 0
-  prediction$value <- prediction$value/max(prediction$value)
-}
+  if(!is.null(calibrationPopulation)){
+    #re-calibrate model:
+    prediction <- base::merge(calibrationPopulation, prediction, by=c('subjectId','cohortStartDate'))
+    recalModel <- stats::glm(y ~ x,
+                             family=stats::binomial(link='logit'),
+                             data=data.frame(x=prediction$covariateValue,
+                                             y=as.factor(prediction$outcomeCount))[prediction$indexes>0,])
+    value <- stats::predict(recalModel, data.frame(x=prediction$covariateValue),
+                            type = "response")
+    prediction$value <- value
+  } else {
+    colnames(prediction)[colnames(prediction)=='covariateValue'] <- 'value'
+    prediction$value[is.na(prediction$value)] <- 0
+    prediction$value <- prediction$value/max(prediction$value)
+  }
 
-attr(prediction, "metaData")$predictionType <- 'binary'
-performance <- PatientLevelPrediction::evaluatePlp(prediction = prediction, plpData = plpData)
-# reformatting the performance
-analysisId <-   '000000'
-nr1 <- length(unlist(performance$evaluationStatistics[-1]))
-performance$evaluationStatistics <- cbind(analysisId= rep(analysisId,nr1),
-                                          Eval=rep('validation', nr1),
-                                          Metric = names(unlist(performance$evaluationStatistics[-1])),
-                                          Value = unlist(performance$evaluationStatistics[-1])
-)
-nr1 <- nrow(performance$thresholdSummary)
-performance$thresholdSummary <- cbind(analysisId=rep(analysisId,nr1),
-                                      Eval=rep('validation', nr1),
-                                      performance$thresholdSummary)
-nr1 <- nrow(performance$demographicSummary)
-if(!is.null(performance$demographicSummary)){
-  performance$demographicSummary <- cbind(analysisId=rep(analysisId,nr1),
-                                          Eval=rep('validation', nr1),
-                                          performance$demographicSummary)
-}
-nr1 <- nrow(performance$calibrationSummary)
-performance$calibrationSummary <- cbind(analysisId=rep(analysisId,nr1),
-                                        Eval=rep('validation', nr1),
-                                        performance$calibrationSummary)
-nr1 <- nrow(performance$predictionDistribution)
-performance$predictionDistribution <- cbind(analysisId=rep(analysisId,nr1),
+  attr(prediction, "metaData")$predictionType <- 'binary'
+  performance <- PatientLevelPrediction::evaluatePlp(prediction = prediction, plpData = plpData)
+  # reformatting the performance
+  analysisId <-   '000000'
+  nr1 <- length(unlist(performance$evaluationStatistics[-1]))
+  performance$evaluationStatistics <- cbind(analysisId= rep(analysisId,nr1),
                                             Eval=rep('validation', nr1),
-                                            performance$predictionDistribution)
+                                            Metric = names(unlist(performance$evaluationStatistics[-1])),
+                                            Value = unlist(performance$evaluationStatistics[-1])
+  )
+  nr1 <- nrow(performance$thresholdSummary)
+  performance$thresholdSummary <- cbind(analysisId=rep(analysisId,nr1),
+                                        Eval=rep('validation', nr1),
+                                        performance$thresholdSummary)
+  nr1 <- nrow(performance$demographicSummary)
+  if(!is.null(performance$demographicSummary)){
+    performance$demographicSummary <- cbind(analysisId=rep(analysisId,nr1),
+                                            Eval=rep('validation', nr1),
+                                            performance$demographicSummary)
+  }
+  nr1 <- nrow(performance$calibrationSummary)
+  performance$calibrationSummary <- cbind(analysisId=rep(analysisId,nr1),
+                                          Eval=rep('validation', nr1),
+                                          performance$calibrationSummary)
+  nr1 <- nrow(performance$predictionDistribution)
+  performance$predictionDistribution <- cbind(analysisId=rep(analysisId,nr1),
+                                              Eval=rep('validation', nr1),
+                                              performance$predictionDistribution)
 
-inputSetting <- list(connectionDetails=connectionDetails,
-                      cdmDatabaseSchema=cdmDatabaseSchema,
-                      cohortDatabaseSchema=cohortDatabaseSchema,
-                      outcomeDatabaseSchema=outcomeDatabaseSchema,
-                      cohortTable=cohortTable,
-                      outcomeTable=outcomeTable,
-                      cohortId=cohortId,
-                      outcomeId=outcomeId,
-                      oracleTempSchema=oracleTempSchema)
-result <- list(model=list(model='chads2'),
-               analysisRef ='000000',
-               inputSetting =inputSetting,
-               executionSummary = 'Not available',
-               prediction=prediction,
-               performanceEvaluation=performance)
-class(result$model) <- 'plpModel'
-attr(result$model, "type")<- 'existing model'
-class(result) <- 'runPlp'
-return(result)
-}
+  inputSetting <- list(connectionDetails=connectionDetails,
+                        cdmDatabaseSchema=cdmDatabaseSchema,
+                        cohortDatabaseSchema=cohortDatabaseSchema,
+                        outcomeDatabaseSchema=outcomeDatabaseSchema,
+                        cohortTable=cohortTable,
+                        outcomeTable=outcomeTable,
+                        cohortId=cohortId,
+                        outcomeId=outcomeId,
+                        oracleTempSchema=oracleTempSchema)
+  result <- list(model=list(model='chads2'),
+                 analysisRef ='000000',
+                 inputSetting =inputSetting,
+                 executionSummary = 'Not available',
+                 prediction=prediction,
+                 performanceEvaluation=performance)
+  class(result$model) <- 'plpModel'
+  attr(result$model, "type")<- 'existing model'
+  class(result) <- 'runPlp'
+  return(result)
+  }

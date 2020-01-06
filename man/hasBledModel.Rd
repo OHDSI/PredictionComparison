@@ -7,8 +7,9 @@
 hasBledModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
   outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
   oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
-  requireTimeAtRisk = T, minTimeAtRisk = 364, includeAllOutcomes = T,
-  removePriorOutcome = T, calibrationPopulation = NULL)
+  addExposureDaysToEnd = F, requireTimeAtRisk = T, minTimeAtRisk = 364,
+  includeAllOutcomes = T, removePriorOutcome = T,
+  calibrationPopulation = NULL)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}
@@ -32,6 +33,8 @@ hasBledModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 \item{riskWindowStart}{The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
 
 \item{riskWindowEnd}{The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
+
+\item{addExposureDaysToEnd}{Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR}
 
 \item{requireTimeAtRisk}{Require a minimum number of days observed in the time at risk period?}
 

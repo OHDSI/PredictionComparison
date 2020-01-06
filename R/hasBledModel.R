@@ -15,6 +15,7 @@
 #' @param oracleTempSchema    The temp schema require is using oracle
 #' @param riskWindowStart    The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date
 #' @param riskWindowEnd      The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date
+#' @param addExposureDaysToEnd  Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR
 #' @param requireTimeAtRisk  Require a minimum number of days observed in the time at risk period?
 #' @param minTimeAtRisk      If requireTimeAtRisk is true, the minimum number of days at risk
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
@@ -36,6 +37,7 @@ hasBledModel <- function(connectionDetails,
                     oracleTempSchema=NULL,
                     riskWindowStart = 1,
                     riskWindowEnd = 365,
+                    addExposureDaysToEnd = F,
                     requireTimeAtRisk = T,
                     minTimeAtRisk = 364,
                     includeAllOutcomes = T,
@@ -98,6 +100,7 @@ result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                               covariateSettings = covariateSettings,
                                               riskWindowStart = riskWindowStart,
                                               riskWindowEnd = riskWindowEnd,
+                                              addExposureDaysToEnd = addExposureDaysToEnd,
                                               requireTimeAtRisk = requireTimeAtRisk,
                                               minTimeAtRisk = minTimeAtRisk,
                                               includeAllOutcomes = includeAllOutcomes,
@@ -110,23 +113,26 @@ result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                               outcomeDatabaseSchema = outcomeDatabaseSchema,
                                               outcomeTable = outcomeTable,
                                               outcomeId = outcomeId,
+                                              oracleTempSchema = oracleTempSchema,
                                               calibrationPopulation=calibrationPopulation)
 
-inputSetting <- list(connectionDetails=connectionDetails,
-                     cdmDatabaseSchema=cdmDatabaseSchema,
-                     cohortDatabaseSchema=cohortDatabaseSchema,
-                     outcomeDatabaseSchema=outcomeDatabaseSchema,
-                     cohortTable=cohortTable,
-                     outcomeTable=outcomeTable,
-                     cohortId=cohortId,
-                     outcomeId=outcomeId,
-                     oracleTempSchema=oracleTempSchema)
-result <- list(model=list(model='hasbled'),
-               analysisRef ='000000',
-               inputSetting =inputSetting,
-               executionSummary = 'Not available',
-               prediction=result$prediction,
-               performanceEvaluation=result$performance)
+result$model$modelName <- 'hasbleed'
+
+result$inputSetting <- list(connectionDetails=connectionDetails,
+                            cdmDatabaseSchema=cdmDatabaseSchema,
+                            cohortDatabaseSchema=cohortDatabaseSchema,
+                            outcomeDatabaseSchema=outcomeDatabaseSchema,
+                            cohortTable=cohortTable,
+                            outcomeTable=outcomeTable,
+                            cohortId=cohortId,
+                            outcomeId=outcomeId,
+                            oracleTempSchema=oracleTempSchema)
+
+result$covariateSummary<- merge(result$covariateSummary,
+                                existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='HAS-BLED'],c('Name','modelCovariateId')],
+                                by.x='covariateId', by.y='modelCovariateId', all=T)
+result$covariateSummary$covariateName = result$covariateSummary$Name
+
 class(result$model) <- 'plpModel'
 attr(result$model, "type")<- 'existing model'
 class(result) <- 'runPlp'

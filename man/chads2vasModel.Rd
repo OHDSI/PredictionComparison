@@ -7,9 +7,9 @@
 chads2vasModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
   outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
   oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
-  requireTimeAtRisk = T, minTimeAtRisk = 364, includeAllOutcomes = T,
-  firstExposureOnly = F, removePriorOutcome = T,
-  calibrationPopulation = NULL)
+  addExposureDaysToEnd = F, requireTimeAtRisk = T, minTimeAtRisk = 364,
+  includeAllOutcomes = T, firstExposureOnly = F, removePriorOutcome = T,
+  recalibrate = T, calibrationPopulation = NULL)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}
@@ -34,6 +34,8 @@ chads2vasModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 
 \item{riskWindowEnd}{The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
 
+\item{addExposureDaysToEnd}{Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR}
+
 \item{requireTimeAtRisk}{Require a minimum number of days observed in the time at risk period?}
 
 \item{minTimeAtRisk}{If requireTimeAtRisk is true, the minimum number of days at risk}
@@ -43,6 +45,8 @@ chads2vasModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 \item{firstExposureOnly}{Whether to restrict to first target cohort start date if people are in target popualtion multiple times}
 
 \item{removePriorOutcome}{Remove people with prior outcomes from the target population}
+
+\item{recalibrate}{Recalibrate the model on the new data}
 
 \item{calibrationPopulation}{A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data}
 }

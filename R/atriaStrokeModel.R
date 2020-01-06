@@ -15,10 +15,12 @@
 #' @param oracleTempSchema   The temp schema require is using oracle
 #' @param riskWindowStart    The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date
 #' @param riskWindowEnd      The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date
+#' @param addExposureDaysToEnd  Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR
 #' @param requireTimeAtRisk  Require a minimum number of days observed in the time at risk period?
 #' @param minTimeAtRisk      If requireTimeAtRisk is true, the minimum number of days at risk
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
+#' @param recalibrate         Recalibrate model on new data
 #' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
 #'
 #' @return
@@ -36,10 +38,12 @@ atriaStrokeModel <- function(connectionDetails,
                          oracleTempSchema=NULL,
                          riskWindowStart = 1,
                          riskWindowEnd = 365,
+                         addExposureDaysToEnd = addExposureDaysToEnd,
                          requireTimeAtRisk = T,
                          minTimeAtRisk = 364,
                          includeAllOutcomes = T,
                          removePriorOutcome = T,
+                         recalibrate = T,
                          calibrationPopulation=NULL){
 
   #input checks...
@@ -85,6 +89,11 @@ atriaStrokeModel <- function(connectionDetails,
                                                                   useConditionGroupEraLongTerm = T,
                                                                   longTermStartDays = -365*5)
 
+  #scoreToProb <- data.frame(score = c(0,1,2,3,4,5,6,7,8,
+  #                                    9,10,11,12,13,14,15),
+  #                          probability = c(0.08,0.43,0.99,0.73,0.64,0.99,1.91,2.50,3.86,
+  #                                          4.33,6.35,6.18,10.95,7.52,16.36,0)/100)
+
   result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                                           covariateTable = conceptSets[,c('modelCovariateId','covariateId')],
                                                           interceptTable = NULL,
@@ -92,6 +101,7 @@ atriaStrokeModel <- function(connectionDetails,
                                                           covariateSettings = covariateSettings,
                                                           riskWindowStart = riskWindowStart,
                                                           riskWindowEnd = riskWindowEnd,
+                                                          addExposureDaysToEnd = addExposureDaysToEnd,
                                                           requireTimeAtRisk = requireTimeAtRisk,
                                                           minTimeAtRisk = minTimeAtRisk,
                                                           includeAllOutcomes = includeAllOutcomes,
@@ -104,9 +114,15 @@ atriaStrokeModel <- function(connectionDetails,
                                                           outcomeDatabaseSchema = outcomeDatabaseSchema,
                                                           outcomeTable = outcomeTable,
                                                           outcomeId = outcomeId,
+                                                          oracleTempSchema = oracleTempSchema,
+                                                          #scoreToProb =  scoreToProb,
                                                           calibrationPopulation=calibrationPopulation)
 
-  inputSetting <- list(connectionDetails=connectionDetails,
+
+
+  result$model$modelName <- 'atriaStroke'
+
+  result$inputSetting <- list(connectionDetails=connectionDetails,
                        cdmDatabaseSchema=cdmDatabaseSchema,
                        cohortDatabaseSchema=cohortDatabaseSchema,
                        outcomeDatabaseSchema=outcomeDatabaseSchema,
@@ -115,12 +131,12 @@ atriaStrokeModel <- function(connectionDetails,
                        cohortId=cohortId,
                        outcomeId=outcomeId,
                        oracleTempSchema=oracleTempSchema)
-  result <- list(model=list(model='atriaStroke'),
-                 analysisRef ='000000',
-                 inputSetting =inputSetting,
-                 executionSummary = 'Not available',
-                 prediction=result$prediction,
-                 performanceEvaluation=result$performance)
+
+  result$covariateSummary<- merge(result$covariateSummary,
+                  existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='Atria'],c('Name','modelCovariateId')],
+                  by.x='covariateId', by.y='modelCovariateId', all=T)
+  result$covariateSummary$covariateName = result$covariateSummary$Name
+
   class(result$model) <- 'plpModel'
   attr(result$model, "type")<- 'existing model'
   class(result) <- 'runPlp'

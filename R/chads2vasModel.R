@@ -15,11 +15,13 @@
 #' @param oracleTempSchema    The temp schema require is using oracle
 #' @param riskWindowStart    The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date
 #' @param riskWindowEnd      The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date
+#' @param addExposureDaysToEnd  Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR
 #' @param requireTimeAtRisk  Require a minimum number of days observed in the time at risk period?
 #' @param minTimeAtRisk      If requireTimeAtRisk is true, the minimum number of days at risk
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param firstExposureOnly   Whether to restrict to first target cohort start date if people are in target popualtion multiple times
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
+#' @param recalibrate         Recalibrate the model on the new data
 #' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
 #'
 #' @return
@@ -37,11 +39,13 @@ chads2vasModel <- function(connectionDetails,
                     oracleTempSchema=NULL,
                     riskWindowStart = 1,
                     riskWindowEnd = 365,
+                    addExposureDaysToEnd = F,
                     requireTimeAtRisk = T,
                     minTimeAtRisk = 364,
                     includeAllOutcomes = T,
                     firstExposureOnly=F,
                     removePriorOutcome=T,
+                    recalibrate = T,
                     calibrationPopulation=NULL){
 
   #input checks...
@@ -90,6 +94,7 @@ population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             binary = T,
                                                             riskWindowStart = riskWindowStart,
                                                             riskWindowEnd = riskWindowEnd,
+                                                            addExposureDaysToEnd = addExposureDaysToEnd,
                                                             requireTimeAtRisk = requireTimeAtRisk,
                                                             minTimeAtRisk = minTimeAtRisk,
                                                             includeAllOutcomes = includeAllOutcomes,
@@ -97,6 +102,10 @@ population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             removeSubjectsWithPriorOutcome =removePriorOutcome)
 
 prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
+
+covSum <- PatientLevelPrediction:::covariateSummary(plpData, population)
+
+recalModel <- NULL
 if(!is.null(calibrationPopulation)){
   #re-calibrate model:
   prediction <- base::merge(calibrationPopulation, prediction, by=c('subjectId','cohortStartDate'))
@@ -107,6 +116,18 @@ if(!is.null(calibrationPopulation)){
   value <- stats::predict(recalModel, data.frame(x=prediction$covariateValue),
                           type = "response")
   prediction$value <- value
+} else if(recalibrate & is.null(calibrationPopulation)){
+  sampleCal <- sample(floor(nrow(prediction)*0.25))
+  recalModel <- stats::glm(y ~ x,
+                           family=stats::binomial(link='logit'),
+                           data=data.frame(x=prediction$covariateValue,
+                                           y=as.factor(prediction$outcomeCount))[sampleCal,])
+  value <- stats::predict(recalModel, data.frame(x=prediction$covariateValue),
+                          type = "response")
+  prediction$value <- value
+  prediction$index <- -1
+  prediction$index[sampleCal] <- 1
+
 } else {
   colnames(prediction)[colnames(prediction)=='covariateValue'] <- 'value'
   prediction$value[is.na(prediction$value)] <- 0
@@ -142,7 +163,7 @@ performance$predictionDistribution <- cbind(analysisId=rep(analysisId,nr1),
                                             Eval=rep('validation', nr1),
                                             performance$predictionDistribution)
 
-inputSetting <- list(connectionDetails=connectionDetails,
+inputSetting <- list(dataExtrractionSettings=list(connectionDetails=connectionDetails,
                      cdmDatabaseSchema=cdmDatabaseSchema,
                      cohortDatabaseSchema=cohortDatabaseSchema,
                      outcomeDatabaseSchema=outcomeDatabaseSchema,
@@ -150,13 +171,33 @@ inputSetting <- list(connectionDetails=connectionDetails,
                      outcomeTable=outcomeTable,
                      cohortId=cohortId,
                      outcomeId=outcomeId,
-                     oracleTempSchema=oracleTempSchema)
-result <- list(model=list(model='chads2vas'),
-               analysisRef ='000000',
-               inputSetting =inputSetting,
-               executionSummary = 'Not available',
+                     oracleTempSchema=oracleTempSchema))
+
+executionSummary <- list(PackageVersion = list(rVersion= R.Version()$version.string,
+                                               packageVersion = utils::packageVersion("PatientLevelPrediction")),
+                         PlatformDetails= list(platform= R.Version()$platform,
+                                               cores= Sys.getenv('NUMBER_OF_PROCESSORS'),
+                                               RAM=utils::memory.size()), #  test for non-windows needed
+                         # Sys.info()
+                         TotalExecutionElapsedTime = NULL,
+                         ExecutionDateTime = Sys.Date())
+
+result <- list(performanceEvaluation=performance,
                prediction=prediction,
-               performanceEvaluation=performance)
+               inputSetting = inputSetting,
+               executionSummary = executionSummary,
+               model = list(model=list(name='chads2vas',
+                            modelName=NULL,
+                            modelTable=NULL,
+                            covariateTable=NULL,
+                            interceptTable=NULL,
+                            recalModel = recalModel)),
+               analysisRef=list(analysisId=NULL,
+                                analysisName=NULL,
+                                analysisSettings= NULL),
+               covariateSummary = covSum)
+
+
 class(result$model) <- 'plpModel'
 attr(result$model, "type")<- 'existing model'
 class(result) <- 'runPlp'

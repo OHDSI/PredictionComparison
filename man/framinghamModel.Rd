@@ -7,8 +7,9 @@
 framinghamModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
   outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
   oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
-  requireTimeAtRisk = T, minTimeAtRisk = 364, includeAllOutcomes = T,
-  removePriorOutcome = T, calibrationPopulation = NULL)
+  addExposureDaysToEnd = F, requireTimeAtRisk = T, minTimeAtRisk = 364,
+  includeAllOutcomes = T, removePriorOutcome = T, recalibrate = T,
+  calibrationPopulation = NULL)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}
@@ -33,6 +34,8 @@ framinghamModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 
 \item{riskWindowEnd}{The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
 
+\item{addExposureDaysToEnd}{Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR}
+
 \item{requireTimeAtRisk}{Require a minimum number of days observed in the time at risk period?}
 
 \item{minTimeAtRisk}{If requireTimeAtRisk is true, the minimum number of days at risk}
@@ -40,6 +43,8 @@ framinghamModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 \item{includeAllOutcomes}{Whether to include people with outcome who do not satify the minTimeAtRisk}
 
 \item{removePriorOutcome}{Remove people with prior outcomes from the target population}
+
+\item{recalibrate}{Recalibrate model on new data}
 
 \item{calibrationPopulation}{A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data}
 }

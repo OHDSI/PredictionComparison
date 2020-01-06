@@ -15,10 +15,12 @@
 #' @param oracleTempSchema     The temp schema require is using oracle
 #' @param riskWindowStart    The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date
 #' @param riskWindowEnd      The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date
+#' @param addExposureDaysToEnd  Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR
 #' @param requireTimeAtRisk  Require a minimum number of days observed in the time at risk period?
 #' @param minTimeAtRisk      If requireTimeAtRisk is true, the minimum number of days at risk
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
+#' @param recalibrate         Recalibrate model on new data
 #' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
 #'
 #' @return
@@ -36,10 +38,12 @@ framinghamModel <- function(connectionDetails,
                          oracleTempSchema=NULL,
                          riskWindowStart = 1,
                          riskWindowEnd = 365,
+                         addExposureDaysToEnd = F,
                          requireTimeAtRisk = T,
                          minTimeAtRisk = 364,
                          includeAllOutcomes = T,
                          removePriorOutcome=T,
+                         recalibrate = T,
                          calibrationPopulation=NULL){
 
   #input checks...
@@ -90,39 +94,39 @@ select distinct b.@rowIdField as row_id,
 case
 when
 DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=60* 365.25
-and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=62* 365.25
+and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <63* 365.25
 then -1
 when
 DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=63* 365.25
-and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=66* 365.25
+and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <67* 365.25
 then -2
 when
 DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=67* 365.25
-                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=71* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <72* 365.25
 then -3
 when
 DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=72* 365.25
-                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=74* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <75* 365.25
 then -4
 when
 DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=75* 365.25
-                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=77* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <78* 365.25
 then -5
 when
 DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=78* 365.25
-                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=81* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <82* 365.25
 then -6
 when
 DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=82* 365.25
-                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=85* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <86* 365.25
 then -7
 when
 DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=86* 365.25
-                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=90* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <91* 365.25
 then -8
 when
 DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date)>=91* 365.25
-                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <=93* 365.25
+                     and DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1), b.cohort_start_date) <94* 365.25
 then -9 else
 -10 end as covariate_id,  1 as covariate_value
 from @cdmDatabaseSchema.person a inner join @cohortTable b
@@ -131,7 +135,18 @@ where DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1)
 ")
 
   cust$sql <- SqlRender::translateSql(sql = as.character(cust$sql),
-                                      targetDialect = connectionDetails$dbms)$sql
+                                      targetDialect = connectionDetails$dbms,
+                                      oracleTempSchema = oracleTempSchema)$sql
+
+
+  #scoreToProb <- data.frame(score = c(0:31),
+  #                          probability = c(5,5,6,6,7,8,
+  #                                          9,9,11,12,13,
+  #                                          14,16,18,19,21,
+  #                                          24,26,28,31,34,
+  #                                          37,41,44,48,51,
+  #                                          55,59,63,67,71,
+  #                                          75)/100)
 
   result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                                           covariateTable = conceptSets[,c('modelCovariateId','covariateId')],
@@ -141,6 +156,7 @@ where DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1)
                                                           customCovariates =cust,
                                                           riskWindowStart = riskWindowStart,
                                                           riskWindowEnd = riskWindowEnd,
+                                                          addExposureDaysToEnd = addExposureDaysToEnd,
                                                           requireTimeAtRisk = requireTimeAtRisk,
                                                           minTimeAtRisk = minTimeAtRisk,
                                                           includeAllOutcomes = includeAllOutcomes,
@@ -153,23 +169,27 @@ where DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1)
                                                           outcomeDatabaseSchema = outcomeDatabaseSchema,
                                                           outcomeTable = outcomeTable,
                                                           outcomeId = outcomeId,
+                                                          oracleTempSchema = oracleTempSchema,
+                                                         # scoreToProb = scoreToProb,
                                                           calibrationPopulation=calibrationPopulation)
 
-  inputSetting <- list(connectionDetails=connectionDetails,
-                       cdmDatabaseSchema=cdmDatabaseSchema,
-                       cohortDatabaseSchema=cohortDatabaseSchema,
-                       outcomeDatabaseSchema=outcomeDatabaseSchema,
-                       cohortTable=cohortTable,
-                       outcomeTable=outcomeTable,
-                       cohortId=cohortId,
-                       outcomeId=outcomeId,
-                       oracleTempSchema=oracleTempSchema)
-  result <- list(model=list(model='Framingham'),
-                 analysisRef ='000000',
-                 inputSetting =inputSetting,
-                 executionSummary = 'Not available',
-                 prediction=result$prediction,
-                 performanceEvaluation=result$performance)
+  result$model$modelName <- 'Framingham'
+
+  result$inputSetting <- list(connectionDetails=connectionDetails,
+                              cdmDatabaseSchema=cdmDatabaseSchema,
+                              cohortDatabaseSchema=cohortDatabaseSchema,
+                              outcomeDatabaseSchema=outcomeDatabaseSchema,
+                              cohortTable=cohortTable,
+                              outcomeTable=outcomeTable,
+                              cohortId=cohortId,
+                              outcomeId=outcomeId,
+                              oracleTempSchema=oracleTempSchema)
+
+  result$covariateSummary<- merge(result$covariateSummary,
+                                  existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='Framingham'],c('Name','modelCovariateId')],
+                                  by.x='covariateId', by.y='modelCovariateId', all=T)
+  result$covariateSummary$covariateName = result$covariateSummary$Name
+
   class(result$model) <- 'plpModel'
   attr(result$model, "type")<- 'existing model'
   class(result) <- 'runPlp'

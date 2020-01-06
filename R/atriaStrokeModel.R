@@ -38,7 +38,7 @@ atriaStrokeModel <- function(connectionDetails,
                          oracleTempSchema=NULL,
                          riskWindowStart = 1,
                          riskWindowEnd = 365,
-                         addExposureDaysToEnd = addExposureDaysToEnd,
+                         addExposureDaysToEnd = F,
                          requireTimeAtRisk = T,
                          minTimeAtRisk = 364,
                          includeAllOutcomes = T,
@@ -117,7 +117,8 @@ atriaStrokeModel <- function(connectionDetails,
                                                           oracleTempSchema = oracleTempSchema,
                                                           recalibrate = recalibrate,
                                                           #scoreToProb =  scoreToProb,
-                                                          calibrationPopulation=calibrationPopulation)
+														  calibrationPopulation=calibrationPopulation,
+                                                          addExposureDaysToEnd = addExposureDaysToEnd)
 
 
 

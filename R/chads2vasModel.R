@@ -99,7 +99,8 @@ population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             minTimeAtRisk = minTimeAtRisk,
                                                             includeAllOutcomes = includeAllOutcomes,
                                                             firstExposureOnly = firstExposureOnly,
-                                                            removeSubjectsWithPriorOutcome =removePriorOutcome)
+                                                            removeSubjectsWithPriorOutcome =removePriorOutcome,
+                                                            addExposureDaysToEnd = addExposureDaysToEnd)
 
 prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
 

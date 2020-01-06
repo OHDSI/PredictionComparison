@@ -128,7 +128,8 @@ on a.row_id=b.row_id;")
                                                           outcomeId = outcomeId,
                                                           oracleTempSchema = oracleTempSchema,
                                                           recalibrate = recalibrate,
-                                                          calibrationPopulation=calibrationPopulation)
+                                                          calibrationPopulation=calibrationPopulation,
+                                                          addExposureDaysToEnd = addExposureDaysToEnd)
 
   result$model$modelName <- 'qStroke'
 

@@ -21,7 +21,6 @@
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
 #' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
-#'
 #' @return
 #' A list containing the model performance and the personal predictions for each subject in the target population
 #'
@@ -116,7 +115,8 @@ orbitModel <- function(connectionDetails,
                                                           outcomeTable = outcomeTable,
                                                           outcomeId = outcomeId,
                                                           oracleTempSchema = oracleTempSchema,
-                                                          calibrationPopulation=calibrationPopulation)
+                                                          calibrationPopulation=calibrationPopulation,
+                                                          addExposureDaysToEnd = addExposureDaysToEnd)
 
   result$model$modelName <- 'orbit'
 

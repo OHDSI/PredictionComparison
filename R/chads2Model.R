@@ -72,24 +72,25 @@ chads2Model <- function(connectionDetails,
     calibrationPopulation <- calibrationPopulation[,c('subjectId','cohortStartDate','indexes')]
   }
  # modelTable <- data.frame(modelId=1,
-#                           modelCovariateId=1,
-#                           coefficientValue=1)
-#  covariateTable <- data.frame(modelCovariateId=1,
-#                               covariateId=1903)
+  #                           modelCovariateId=1,
+  #                           coefficientValue=1)
+  #  covariateTable <- data.frame(modelCovariateId=1,
+  #                               covariateId=1903)
 
-# use history anytime prior by setting long term look back to 9999
-covariateSettings <- FeatureExtraction::createCovariateSettings(useChads2 = T)
+  # use history anytime prior by setting long term look back to 9999
+  covariateSettings <- FeatureExtraction::createCovariateSettings(useChads2 = T)
 
-plpData <- PatientLevelPrediction::getPlpData(connectionDetails = connectionDetails,
-                                   cdmDatabaseSchema = cdmDatabaseSchema,
-                                   oracleTempSchema =  oracleTempSchema,
-                                   cohortId = cohortId, outcomeIds = outcomeId,
-                                   cohortDatabaseSchema = cohortDatabaseSchema,
-                                   cohortTable = cohortTable,
-                                   outcomeDatabaseSchema = outcomeDatabaseSchema,
-                                   outcomeTable = outcomeTable, cdmVersion = 5,
-                                   sampleSize = NULL, covariateSettings = covariateSettings
-                                   )
+  plpData <- PatientLevelPrediction::getPlpData(connectionDetails = connectionDetails,
+                                     cdmDatabaseSchema = cdmDatabaseSchema,
+                                     oracleTempSchema =  oracleTempSchema,
+                                     cohortId = cohortId, outcomeIds = outcomeId,
+                                     cohortDatabaseSchema = cohortDatabaseSchema,
+                                     cohortTable = cohortTable,
+                                     outcomeDatabaseSchema = outcomeDatabaseSchema,
+                                     outcomeTable = outcomeTable, cdmVersion = 5,
+                                     sampleSize = NULL, covariateSettings = covariateSettings
+                                     )
+
 
 population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             outcomeId = outcomeId,
@@ -103,7 +104,8 @@ population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             firstExposureOnly = firstExposureOnly,
                                                             removeSubjectsWithPriorOutcome =removePriorOutcome)
 
-prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
+
+  prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
 
 covSum <- PatientLevelPrediction:::covariateSummary(plpData, population)
 
@@ -136,34 +138,35 @@ if(!is.null(calibrationPopulation)){
   prediction$value <- prediction$value/max(prediction$value)
 }
 
-attr(prediction, "metaData")$predictionType <- 'binary'
-performance <- PatientLevelPrediction::evaluatePlp(prediction = prediction, plpData = plpData)
-# reformatting the performance
-analysisId <-   '000000'
-nr1 <- length(unlist(performance$evaluationStatistics[-1]))
-performance$evaluationStatistics <- cbind(analysisId= rep(analysisId,nr1),
-                                          Eval=rep('validation', nr1),
-                                          Metric = names(unlist(performance$evaluationStatistics[-1])),
-                                          Value = unlist(performance$evaluationStatistics[-1])
-)
-nr1 <- nrow(performance$thresholdSummary)
-performance$thresholdSummary <- cbind(analysisId=rep(analysisId,nr1),
-                                      Eval=rep('validation', nr1),
-                                      performance$thresholdSummary)
-nr1 <- nrow(performance$demographicSummary)
-if(!is.null(performance$demographicSummary)){
-  performance$demographicSummary <- cbind(analysisId=rep(analysisId,nr1),
-                                          Eval=rep('validation', nr1),
-                                          performance$demographicSummary)
-}
-nr1 <- nrow(performance$calibrationSummary)
-performance$calibrationSummary <- cbind(analysisId=rep(analysisId,nr1),
-                                        Eval=rep('validation', nr1),
-                                        performance$calibrationSummary)
-nr1 <- nrow(performance$predictionDistribution)
-performance$predictionDistribution <- cbind(analysisId=rep(analysisId,nr1),
+
+  attr(prediction, "metaData")$predictionType <- 'binary'
+  performance <- PatientLevelPrediction::evaluatePlp(prediction = prediction, plpData = plpData)
+  # reformatting the performance
+  analysisId <-   '000000'
+  nr1 <- length(unlist(performance$evaluationStatistics[-1]))
+  performance$evaluationStatistics <- cbind(analysisId= rep(analysisId,nr1),
                                             Eval=rep('validation', nr1),
-                                            performance$predictionDistribution)
+                                            Metric = names(unlist(performance$evaluationStatistics[-1])),
+                                            Value = unlist(performance$evaluationStatistics[-1])
+  )
+  nr1 <- nrow(performance$thresholdSummary)
+  performance$thresholdSummary <- cbind(analysisId=rep(analysisId,nr1),
+                                        Eval=rep('validation', nr1),
+                                        performance$thresholdSummary)
+  nr1 <- nrow(performance$demographicSummary)
+  if(!is.null(performance$demographicSummary)){
+    performance$demographicSummary <- cbind(analysisId=rep(analysisId,nr1),
+                                            Eval=rep('validation', nr1),
+                                            performance$demographicSummary)
+  }
+  nr1 <- nrow(performance$calibrationSummary)
+  performance$calibrationSummary <- cbind(analysisId=rep(analysisId,nr1),
+                                          Eval=rep('validation', nr1),
+                                          performance$calibrationSummary)
+  nr1 <- nrow(performance$predictionDistribution)
+  performance$predictionDistribution <- cbind(analysisId=rep(analysisId,nr1),
+                                              Eval=rep('validation', nr1),
+                                              performance$predictionDistribution)
 
 inputSetting <- list(connectionDetails=connectionDetails,
                       cdmDatabaseSchema=cdmDatabaseSchema,
@@ -205,3 +208,4 @@ attr(result$model, "type")<- 'existing model'
 class(result) <- 'runPlp'
 return(result)
 }
+

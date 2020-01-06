@@ -119,7 +119,8 @@ atriaModel <- function(connectionDetails,
                                                           outcomeTable = outcomeTable,
                                                           outcomeId = outcomeId,
                                                           oracleTempSchema = oracleTempSchema,
-                                                          calibrationPopulation=calibrationPopulation)
+                                                          calibrationPopulation=calibrationPopulation,
+                                                          addExposureDaysToEnd= addExposureDaysToEnd)
 
   result$model$modelName <- 'atria'
 

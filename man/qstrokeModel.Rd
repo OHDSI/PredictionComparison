@@ -8,7 +8,7 @@ qstrokeModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
   outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
   oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
   addExposureDaysToEnd = F, requireTimeAtRisk = T, minTimeAtRisk = 364,
-  includeAllOutcomes = T, removePriorOutcome = T,
+  includeAllOutcomes = T, removePriorOutcome = T, recalibrate = T,
   calibrationPopulation = NULL)
 }
 \arguments{
@@ -44,9 +44,9 @@ qstrokeModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 
 \item{removePriorOutcome}{Remove people with prior outcomes from the target population}
 
-\item{calibrationPopulation}{A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data}
-
 \item{recalibrate}{Recalibrate on new data}
+
+\item{calibrationPopulation}{A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data}
 }
 \value{
 A list containing the model performance and the personal predictions for each subject in the target population

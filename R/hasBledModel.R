@@ -114,8 +114,7 @@ result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
                                               outcomeTable = outcomeTable,
                                               outcomeId = outcomeId,
                                               oracleTempSchema = oracleTempSchema,
-                                              calibrationPopulation=calibrationPopulation,
-                                              addExposureDaysToEnd= addExposureDaysToEnd)
+                                              calibrationPopulation=calibrationPopulation)
 
 result$model$modelName <- 'hasbleed'
 

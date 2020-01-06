@@ -117,8 +117,7 @@ atriaStrokeModel <- function(connectionDetails,
                                                           oracleTempSchema = oracleTempSchema,
                                                           recalibrate = recalibrate,
                                                           #scoreToProb =  scoreToProb,
-														  calibrationPopulation=calibrationPopulation,
-                                                          addExposureDaysToEnd = addExposureDaysToEnd)
+														  calibrationPopulation=calibrationPopulation)
 
 
 

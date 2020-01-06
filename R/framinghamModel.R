@@ -172,8 +172,7 @@ where DATEDIFF(DAY, DATEFROMPARTS(a.year_of_birth, ISNULL(a.month_of_birth,1),1)
                                                           oracleTempSchema = oracleTempSchema,
                                                           recalibrate = recalibrate,
                                                          # scoreToProb = scoreToProb,
-                                                          calibrationPopulation=calibrationPopulation,
-                                                          addExposureDaysToEnd = addExposureDaysToEnd)
+                                                          calibrationPopulation=calibrationPopulation)
 
   result$model$modelName <- 'Framingham'
 

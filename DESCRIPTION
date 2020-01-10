@@ -1,7 +1,7 @@
 Package: PredictionComparison
 Type: Package
 Title: Package for comparing patient level predictions developed using OHDSI's PatientLevelPreidiction package
-Version: 0.1.0
+Version: 0.2.0
 Date: 2018-03-01
 Author: Jenna Reps [aut],
     Martijn J. Schuemie [aut, cre],

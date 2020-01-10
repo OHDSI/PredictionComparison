@@ -118,21 +118,22 @@ if(!is.null(calibrationPopulation)){
                           type = "response")
   prediction$value <- value
 } else if(recalibrate & is.null(calibrationPopulation)){
-  sampleCal <- sample(floor(nrow(prediction)*0.25))
+  # recalibrate using all the data
   recalModel <- stats::glm(y ~ x,
                            family=stats::binomial(link='logit'),
                            data=data.frame(x=prediction$covariateValue,
-                                           y=as.factor(prediction$outcomeCount))[sampleCal,])
+                                           y=as.factor(prediction$outcomeCount)))
   value <- stats::predict(recalModel, data.frame(x=prediction$covariateValue),
                           type = "response")
   prediction$value <- value
-  prediction$index <- -1
-  prediction$index[sampleCal] <- 1
 
-} else {
+}else {
   colnames(prediction)[colnames(prediction)=='covariateValue'] <- 'value'
   prediction$value[is.na(prediction$value)] <- 0
-  prediction$value <- prediction$value/max(prediction$value)
+  if(max(prediction$value)>1){
+    attr(prediction, "metaData")$scale <- max(prediction$value)
+    prediction$value <- prediction$value/max(prediction$value)
+  }
 }
 
 attr(prediction, "metaData")$predictionType <- 'binary'

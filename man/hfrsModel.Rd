@@ -4,12 +4,26 @@
 \alias{hfrsModel}
 \title{Apply the existing model HFRS (Hospital Frailty Risk Score) using the standardised framework}
 \usage{
-hfrsModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
-  outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
-  oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
-  requireTimeAtRisk = T, minTimeAtRisk = 364, includeAllOutcomes = T,
-  firstExposureOnly = F, removePriorOutcome = T,
-  calibrationPopulation = NULL, addExposureDaysToEnd = F)
+hfrsModel(
+  connectionDetails,
+  cdmDatabaseSchema,
+  cohortDatabaseSchema,
+  outcomeDatabaseSchema,
+  cohortTable,
+  outcomeTable,
+  cohortId,
+  outcomeId,
+  oracleTempSchema = NULL,
+  riskWindowStart = 1,
+  riskWindowEnd = 365,
+  requireTimeAtRisk = T,
+  minTimeAtRisk = 364,
+  includeAllOutcomes = T,
+  firstExposureOnly = F,
+  removePriorOutcome = T,
+  calibrationPopulation = NULL,
+  addExposureDaysToEnd = F
+)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}

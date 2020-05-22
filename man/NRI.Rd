@@ -4,8 +4,12 @@
 \alias{NRI}
 \title{Net reclassification improvement}
 \usage{
-NRI(plpModel1, plpModel2, thresholds = seq(0, 1, 1/100),
-  secondThresholds = NULL)
+NRI(
+  plpModel1,
+  plpModel2,
+  thresholds = seq(0, 1, 1/100),
+  secondThresholds = NULL
+)
 }
 \arguments{
 \item{plpModel1}{The object returned by runPlp() containing the trained model or the output when implementing an existing model}

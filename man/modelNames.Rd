@@ -4,7 +4,9 @@
 \name{modelNames}
 \alias{modelNames}
 \title{The names for each model (with the corresponding modelId)}
-\format{A csv table with the columns: modelId, Name}
+\format{
+A csv table with the columns: modelId, Name
+}
 \usage{
 data(modelNames)
 }

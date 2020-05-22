@@ -12,16 +12,25 @@
 #' @param outcomeTable        A string specifying the table containing the outcome cohort
 #' @param cohortId             An iteger specifying the cohort id for the target population cohorts
 #' @param outcomeId          An iteger specifying the cohort id for the outcome cohorts
-#' @param oracleTempSchema   The temp schema require is using oracle
+#' @param oracleTempSchema    The temp schema require is using oracle
+#' @param cdmVersion        The CDM version you are using
+#' @param analysisId         An id to give to the study
+#' @param sampleSize         The size to sample from T when applying the existing model
 #' @param riskWindowStart    The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date
+#' @param startAnchor        Is the risk start relative to cohort_start or cohort_end
 #' @param riskWindowEnd      The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date
-#' @param addExposureDaysToEnd  Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR
+#' @param endAnchor          Is the risk end relative to cohort_start or cohort_end
+#' @param endDay            The last day relative to index for the covariates
 #' @param requireTimeAtRisk  Require a minimum number of days observed in the time at risk period?
 #' @param minTimeAtRisk      If requireTimeAtRisk is true, the minimum number of days at risk
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param removePriorOutcome  Remove people with prior outcomes from the target population
-#' @param recalibrate         Recalibrate on new data
+#' @param priorOutcomeLookback  Time prior to index to remove people if they have the outcome
 #' @param calibrationPopulation A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data
+#' @param createCovariateCohorts Create the cohorts used for the covariates in the model
+#' @param overwriteExistingCohorts Overwrite cohorts that already exist in the covariateCohortTable table
+#' @param covariateDatabaseSchema A read/write database to keep the covariate cohorts
+#' @param covariateCohortTable A read/write table to keep the covariate cohorts
 #'
 #' @return
 #' A list containing the model performance and the personal predictions for each subject in the target population
@@ -36,15 +45,24 @@ qstrokeModel <- function(connectionDetails,
                          cohortId,
                          outcomeId,
                          oracleTempSchema=NULL,
+                         cdmVersion = 5,
+                         analysisId = 'Q-stroke-female',
+                         sampleSize = NULL,
                          riskWindowStart = 1,
+                         startAnchor = 'cohort_start',
                          riskWindowEnd = 365,
-                         addExposureDaysToEnd = F,
+                         endAnchor = 'cohort_start',
+                         endDay = -1,
                          requireTimeAtRisk = T,
-                         minTimeAtRisk = 364,
+                         minTimeAtRisk = 1,
                          includeAllOutcomes = T,
                          removePriorOutcome=T,
-						 recalibrate = T,
-                         calibrationPopulation=NULL){
+                         priorOutcomeLookback = 9999,
+                         calibrationPopulation=NULL,
+                         createCovariateCohorts = T,
+                         overwriteExistingCohorts = T,
+                         covariateDatabaseSchema = cohortDatabaseSchema,
+                         covariateCohortTable = 'PredictionComp'){
 
   #input checks...
   if(missing(connectionDetails))
@@ -69,68 +87,136 @@ qstrokeModel <- function(connectionDetails,
     }
     calibrationPopulation <- calibrationPopulation[,c('subjectId','cohortStartDate','indexes')]
   }
-  conceptSets <- system.file("extdata", "existingStrokeModels_concepts.csv", package = "PredictionComparison")
-  conceptSets <- read.csv(conceptSets)
 
-  existingBleedModels <- system.file("extdata", "existingStrokeModels_modelTable.csv", package = "PredictionComparison")
-  existingBleedModels <- read.csv(existingBleedModels)
+  warning('This model uses Race as a predictor which is currently not included into this version')
+  warning('This model uses Townsend deprivation score as a predictor which is not included into this version as it is UK specific')
+  warning('This model uses measurements Systolic blood pressue and Cholesterol ratio as predictors which may not be well recorded in claims data')
 
-  modelNames <- system.file("extdata", "existingStrokeModels_models.csv", package = "PredictionComparison")
-  modelNames <- read.csv(modelNames)
 
-  modelTable <- existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='Qstroke'],]
-  modelTable <- modelTable[,c('modelId','modelCovariateId','coefficientValue')]
+  modelName <- 'qstroke-female'
 
-  # use history anytime prior by setting long term look back to 9999
-  covariateSettings <- FeatureExtraction::createCovariateSettings(useDemographicsRace  = T,
-                                                                  useConditionOccurrenceLongTerm = T,
-                                                                  useConditionGroupEraLongTerm = T,
-                                                                  useDrugGroupEraShortTerm = T,
-                                                                  useConditionGroupEraMediumTerm = T,
-                                                                  useProcedureOccurrenceLongTerm = T,
-                                                                  useObservationLongTerm = T,
-                                                                  longTermStartDays = -9999,
-                                                                  mediumTermStartDays = -365,
-                                                                  shortTermStartDays = -30)
 
-  cust <- data.frame(covariateId=-46, sql="insert into @targetCovariateTable
-select distinct a.@rowIdField as row_id, @covariateId as covariate_id,  1 as covariate_value
-from
-(select row_id from @targetCovariateTable where covariate_id=320128211) a
-inner join
-(select row_id from @targetCovariateTable where covariate_id=21600381412) b
-on a.row_id=b.row_id;")
+  ParallelLogger::logInfo('Extracting Qstroke (female) settings')
+  # create covariate settings
+  covariateInfo <- getCovariateInfo(modelName)
+  cohortVarsToCreate <- covariateInfo[covariateInfo$analysisId == 456,]
 
-  cust$sql <- SqlRender::translateSql(sql = as.character(cust$sql),
-                                      targetDialect = connectionDetails$dbms,
-                                      oracleTempSchema = oracleTempSchema)$sql
+  #create cohorts
+  if(createCovariateCohorts){
+    counts <- createCohorts(connectionDetails = connectionDetails,
+                            cdmDatabaseSchema = cdmDatabaseSchema,
+                            vocabularyDatabaseSchema = cdmDatabaseSchema,
+                            covariateDatabaseSchema = covariateDatabaseSchema,
+                            covariateCohortTable = covariateCohortTable,
+                            oracleTempSchema = oracleTempSchema,
+                            cohortVarsToCreate = cohortVarsToCreate,
+                            overwriteExistingCohorts = overwriteExistingCohorts)
 
-  result <- PatientLevelPrediction::evaluateExistingModel(modelTable = modelTable,
-                                                          covariateTable = conceptSets[,c('modelCovariateId','covariateId')],
-                                                          interceptTable = NULL,
-                                                          type = 'score',
-                                                          covariateSettings = covariateSettings,
-                                                          customCovariates =cust,
-                                                          riskWindowStart = riskWindowStart,
-                                                          riskWindowEnd = riskWindowEnd,
-                                                          addExposureDaysToEnd = addExposureDaysToEnd,
-                                                          requireTimeAtRisk = requireTimeAtRisk,
-                                                          minTimeAtRisk = minTimeAtRisk,
-                                                          includeAllOutcomes = includeAllOutcomes,
-                                                          removeSubjectsWithPriorOutcome =removePriorOutcome,
-                                                          connectionDetails = connectionDetails,
+    if(!is.null(counts)){
+      ParallelLogger::logInfo('Covariate cohort counts:')
+      ParallelLogger::logInfo('------------------------')
+      lapply(1:nrow(counts), function(i){ParallelLogger::logInfo(paste0(counts$covariateName[i], ': ', counts$cohortCount[i], '-',counts$personCount[i] ))})
+      ParallelLogger::logInfo('------------------------')
+    }
+  }
+
+
+  # measurements: "Systolic blood pressue/10",1455,0.01133287
+  #               "Cholesterol ratio",2455,0.07696104
+
+
+  ParallelLogger::logInfo('Creating covariate settings')
+  covariateSettings <- list()
+  length(covariateSettings) <- 1+nrow(cohortVarsToCreate)
+  covariateSettings[[1]] <- FeatureExtraction::createCovariateSettings(useDemographicsAgeGroup = T,
+                                                                       useMeasurementValueAnyTimePrior = T,
+                                                                       includedCovariateIds = c(3004249705,4156659705, (0:20)*1000+3)
+  )
+
+  # add cohort covariates
+  for(i in 1:nrow(cohortVarsToCreate)){
+    covariateSettings[[1+i]] <- createCohortCovariateSettings(covariateName = as.character(cohortVarsToCreate$cohortName[i]),
+                                                              covariateId = cohortVarsToCreate$cohortId[i]*1000+456,
+                                                              cohortDatabaseSchema = covariateDatabaseSchema,
+                                                              cohortTable = covariateCohortTable,
+                                                              cohortId = cohortVarsToCreate$cohortId[i],
+                                                              startDay=cohortVarsToCreate$startDay[i],
+                                                              endDay= endDay,
+                                                              count= as.character(cohortVarsToCreate$count[i]),
+                                                              ageInteraction = as.character(cohortVarsToCreate$ageInteraction[i]))
+  }
+
+  ParallelLogger::logInfo('Extracting Data')
+  plpData <- tryCatch({PatientLevelPrediction::getPlpData(connectionDetails = connectionDetails,
                                                           cdmDatabaseSchema = cdmDatabaseSchema,
                                                           cohortDatabaseSchema = cohortDatabaseSchema,
                                                           cohortTable = cohortTable,
                                                           cohortId = cohortId,
                                                           outcomeDatabaseSchema = outcomeDatabaseSchema,
                                                           outcomeTable = outcomeTable,
-                                                          outcomeId = outcomeId,
+                                                          outcomeIds = outcomeId,
                                                           oracleTempSchema = oracleTempSchema,
-                                                          recalibrate = recalibrate,
-                                                          calibrationPopulation=calibrationPopulation)
+                                                          covariateSettings = covariateSettings,
+                                                          cdmVersion = cdmVersion,
+                                                          sampleSize = sampleSize)},
+                      finally= ParallelLogger::logTrace('Done extracting data.'),
+                      error= function(cond){ParallelLogger::logError(paste0('Error data extraction:',cond));return(NULL)})
 
-  result$model$modelName <- 'qStroke'
+
+  ParallelLogger::logInfo('Creating study population')
+  population <- tryCatch({PatientLevelPrediction::createStudyPopulation(plpData = plpData,
+                                                                        outcomeId = outcomeId,
+                                                                        riskWindowStart = riskWindowStart,
+                                                                        riskWindowEnd = riskWindowEnd,
+                                                                        startAnchor = startAnchor,
+                                                                        endAnchor = endAnchor,
+                                                                        requireTimeAtRisk = requireTimeAtRisk,
+                                                                        minTimeAtRisk = minTimeAtRisk,
+                                                                        includeAllOutcomes = includeAllOutcomes,
+                                                                        removeSubjectsWithPriorOutcome =removePriorOutcome,
+                                                                        priorOutcomeLookback = priorOutcomeLookback)},
+                         finally= ParallelLogger::logTrace('Done creating pop.'),
+                         error= function(cond){ParallelLogger::logError(paste0('Error creating pop:',cond));return(NULL)})
+
+
+
+  # the mapping from the score to probability
+  map <- function(x){return(x/max(x))}
+
+  ParallelLogger::logInfo('Creating model')
+  plpModel <- tryCatch({list(model = getModel(model = modelName),
+                             analysisId = paste0('Analysis_',analysisId),
+                             hyperParamSearch = NULL,
+                             index = NULL,
+                             trainCVAuc = NULL,
+                             modelSettings = list(model = modelName, modelParameters = NULL),
+                             metaData = NULL,
+                             populationSettings = attr(population, "metaData"),
+                             trainingTime = NULL,
+                             varImp = getModel(model = modelName),
+                             dense = T,
+                             cohortId = cohortId,
+                             outcomeId = outcomeId,
+                             endDay = endDay,
+                             covariateMap = NULL,
+                             predict = getPredict(getModel(model = modelName), mapping = map)
+  )},
+  finally= ParallelLogger::logTrace('Done model.'),
+  error= function(cond){ParallelLogger::logError(paste0('Error creating model:',cond));return(NULL)})
+  class(plpModel) <- 'plpModel'
+
+  ParallelLogger::logInfo('Applying model')
+  result <- tryCatch({PatientLevelPrediction::applyModel(population = population,
+                                                         plpData = plpData,
+                                                         plpModel = plpModel,
+                                                         calculatePerformance = T,
+                                                         databaseOutput = F,
+                                                         silent = F) },
+                     finally= ParallelLogger::logTrace('Done applying model.'),
+                     error= function(cond){ParallelLogger::logError(paste0('Error applying model:',cond));return(NULL)})
+
+
+  result$model$modelName <- modelName
 
   result$inputSetting <- list(connectionDetails=connectionDetails,
                               cdmDatabaseSchema=cdmDatabaseSchema,
@@ -141,11 +227,6 @@ on a.row_id=b.row_id;")
                               cohortId=cohortId,
                               outcomeId=outcomeId,
                               oracleTempSchema=oracleTempSchema)
-
-  result$covariateSummary<- merge(result$covariateSummary,
-                                  existingBleedModels[existingBleedModels$modelId==modelNames$modelId[modelNames$name=='Qstroke'],c('Name','modelCovariateId')],
-                                  by.x='covariateId', by.y='modelCovariateId', all=T)
-  result$covariateSummary$covariateName = result$covariateSummary$Name
 
   class(result$model) <- 'plpModel'
   attr(result$model, "type")<- 'existing model'

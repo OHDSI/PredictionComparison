@@ -299,7 +299,7 @@ IDI <- function(plpModel1, plpModel2){
 #'
 #' @export
 multipleIDI <- function(plpRunList){
-  if(class(plpRunList)!='list')
+  if(!checkPlpObject(plpRunList[[1]]))
     stop('List of models required use IDI for two models')
 
   results <- c()
@@ -329,7 +329,7 @@ extractNetBenefit <- function(runPlp, type=NULL, modelId=NULL){
   #[TODO] add input test
   if(missing(runPlp))
     stop('runPlp Missing')
-  if(class(runPlp)!='runPlp')
+  if(!checkPlpObject(runPlp))
     stop('Incorrect class')
 
   data <- runPlp$performanceEvaluation$thresholdSummary

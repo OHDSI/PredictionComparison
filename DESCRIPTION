@@ -1,7 +1,7 @@
 Package: PredictionComparison
 Type: Package
 Title: Package for comparing patient level predictions developed using OHDSI's PatientLevelPreidiction package
-Version: 1.0.0
+Version: 1.0.1
 Date: 2018-03-01
 Author: Jenna Reps [aut],
     Martijn J. Schuemie [aut, cre],
@@ -17,7 +17,9 @@ Depends:
 Imports:
     ggplot2,
     gridExtra,
-    Andromeda
+    Andromeda,
+    tidyr,
+    dplyr
 Suggests:
   testthat,
   Hmisc,

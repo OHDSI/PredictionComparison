@@ -105,12 +105,12 @@ getCohortCovariateData <- function(connection,
                             endDay = 0,
                             isBinary = "Y",
                             missingMeansZero = "Y")
-  analysisRef <- ff::as.ffdf(analysisRef)
+  analysisRef <- tidyr::as_tibble(analysisRef)
 
   metaData <- list(sql = sql, call = match.call())
   result <- list(covariates = covariates,
                  covariateRef = covariateRef,
-                 analysisRef=analysisRef,
+                 analysisRef= analysisRef,
                  metaData = metaData)
   class(result) <- "covariateData"
   return(result)

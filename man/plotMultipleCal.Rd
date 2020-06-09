@@ -4,7 +4,7 @@
 \alias{plotMultipleCal}
 \title{Plot a calibration plot for multiple models}
 \usage{
-plotMultipleCal(runPlpList, names, type = "test", ncol = 2)
+plotMultipleCal(runPlpList, names, type = "test", grid = F, ncol = 2)
 }
 \arguments{
 \item{runPlpList}{An object of class 'runPlp' or list of object of class 'runPlp' returned by implementing runPlp() or the output when implementing an existing model}
@@ -12,6 +12,8 @@ plotMultipleCal(runPlpList, names, type = "test", ncol = 2)
 \item{names}{A string or vector of model names corresponding to the runPlpList}
 
 \item{type}{A strng or vector of evaluation types (train/test/validation) to filter for each runPlp}
+
+\item{grid}{Whether to plot each model seperately using a grid or overlay the plots (grid=F)}
 
 \item{ncol}{The number of columns for the grid}
 }

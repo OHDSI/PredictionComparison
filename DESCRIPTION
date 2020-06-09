@@ -17,8 +17,7 @@ Depends:
 Imports:
     ggplot2,
     gridExtra,
-    ff,
-    ffbase (>= 0.12.1)
+    Andromeda
 Suggests:
   testthat,
   Hmisc,

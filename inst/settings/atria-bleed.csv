@@ -1,0 +1,10 @@
+"covariateName","covariateId","points"
+"Anemia",24456,3
+"Severe Renal Disease - Glomerular filtration rate <30 mL/min or dialysis-dependent",25456,3
+"Age >=75",15003,1
+"Age >=75",16003,1
+"Age >=75",17003,1
+"Age >=75",18003,1
+"Age >=75",19003,1
+"Any Prior Hemorrhage Diagnosis-Ex: GI bleed, intracranial hemorrhage",21456,1
+"Hypertension",4456,1

@@ -1,0 +1,14 @@
+"covariateName","covariateId","points"
+"Age >=85",17003,6
+"Age >=85",18003,6
+"Age >=85",19003,6
+"Age 75-84",15003,5
+"Age 75-84",16003,5
+"Age 65-74",13003,3
+"Age 65-74",14003,3
+"Female",8532001,1
+"Diabetes",27456,1
+"Congestive heart failure",28456,1
+"Hypertension",4456,1
+"Proteinuria",29456,1
+"eGFR<45 or ESRD",30456,1

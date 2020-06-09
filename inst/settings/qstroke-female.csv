@@ -1,0 +1,25 @@
+"covariateName","covariateId","points"
+"Systolic blood pressue/10",3004249705,0.01133287
+"Cholesterol ratio",4156659705,0.07696104
+"Townsend deprivation score",0,0.2851789
+"Former smoker",31456,0.14842
+"indian",32454,-0.03045921
+"pakistani",33454,0.4446858
+"bangladeshi",34454,0.2700271
+"other asian",35454,-0.2613648
+"caribbean",36454,-0.05129329
+"black african",37454,-0.2744368
+"chinese",38454,-0.6733446
+"other ethnic group",39454,-0.1625189
+"family history of coronary heart disease",40456,0.2851789
+"atrial fibrillation",41456,1.12493
+"coronary heart disease",42456,1.137833
+"congestive cardiac failure",28456,1.000632
+"type 1 diabetes",44456,1.291984
+"type 2 diabetes",45456,0.7747272
+"treated hypertension",46456,0.5988365
+"rheumatoid arthritis",47456,0.2926696
+"chronic renal disease",48456,0.3852624
+"valvular heart disease",49456,0.8837675
+
+

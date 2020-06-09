@@ -1,0 +1,16 @@
+"covariateName","covariateId","points"
+"Hepatic or Renal Disease",15456,1
+"Alcohol use (>=8 drinks a week)",14456,1
+"Malignancy History",16456,1
+"Age >=75",15003,1
+"Age >=75",16003,1
+"Age >=75",17003,1
+"Age >=75",18003,1
+"Age >=75",19003,1
+"Reduced Platelet Count or Function (Includes aspirin use, any thrombocytopenia or blood dyscrasia, like hemophilia)",18456,1
+"Rebleeding Risk  (History of past bleeding)",10456,2
+"Hypertension (Uncontrolled)",5456,1
+"Anemia",19456,1
+"Genetic Factors",0,1
+"Excessive Fall Risk",20456,1
+"Stroke History",9456,1

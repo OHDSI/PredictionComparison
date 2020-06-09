@@ -4,12 +4,35 @@
 \alias{atriaStrokeModel}
 \title{Apply the existing model Atria stroke risk using the standardised framework}
 \usage{
-atriaStrokeModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
-  outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
-  oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
-  addExposureDaysToEnd = F, requireTimeAtRisk = T, minTimeAtRisk = 364,
-  includeAllOutcomes = T, removePriorOutcome = T, recalibrate = T,
-  calibrationPopulation = NULL)
+atriaStrokeModel(
+  connectionDetails,
+  cdmDatabaseSchema,
+  cohortDatabaseSchema,
+  outcomeDatabaseSchema,
+  cohortTable,
+  outcomeTable,
+  cohortId,
+  outcomeId,
+  oracleTempSchema = NULL,
+  cdmVersion = 5,
+  analysisId = "AtriaStroke",
+  sampleSize = NULL,
+  riskWindowStart = 1,
+  startAnchor = "cohort_start",
+  riskWindowEnd = 365,
+  endAnchor = "cohort_start",
+  endDay = -1,
+  requireTimeAtRisk = T,
+  minTimeAtRisk = 1,
+  includeAllOutcomes = T,
+  removePriorOutcome = T,
+  priorOutcomeLookback = 9999,
+  calibrationPopulation = NULL,
+  createCovariateCohorts = T,
+  overwriteExistingCohorts = T,
+  covariateDatabaseSchema = cohortDatabaseSchema,
+  covariateCohortTable = "PredictionComp"
+)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}
@@ -30,11 +53,21 @@ atriaStrokeModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 
 \item{oracleTempSchema}{The temp schema require is using oracle}
 
+\item{cdmVersion}{The CDM version you are using}
+
+\item{analysisId}{An id to give to the study}
+
+\item{sampleSize}{The size to sample from T when applying the existing model}
+
 \item{riskWindowStart}{The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
+
+\item{startAnchor}{Is the risk start relative to cohort_start or cohort_end}
 
 \item{riskWindowEnd}{The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
 
-\item{addExposureDaysToEnd}{Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR}
+\item{endAnchor}{Is the risk end relative to cohort_start or cohort_end}
+
+\item{endDay}{The last day relative to index for the covariates}
 
 \item{requireTimeAtRisk}{Require a minimum number of days observed in the time at risk period?}
 
@@ -44,9 +77,17 @@ atriaStrokeModel(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
 
 \item{removePriorOutcome}{Remove people with prior outcomes from the target population}
 
-\item{recalibrate}{Recalibrate model on new data}
+\item{priorOutcomeLookback}{Time prior to index to remove people if they have the outcome}
 
 \item{calibrationPopulation}{A data.frame of subjectId, cohortStartDate, indexes used to recalibrate the model on new data}
+
+\item{createCovariateCohorts}{Create the cohorts used for the covariates in the model}
+
+\item{overwriteExistingCohorts}{Overwrite cohorts that already exist in the covariateCohortTable table}
+
+\item{covariateDatabaseSchema}{A read/write database to keep the covariate cohorts}
+
+\item{covariateCohortTable}{A read/write table to keep the covariate cohorts}
 }
 \value{
 A list containing the model performance and the personal predictions for each subject in the target population
@@ -55,5 +96,5 @@ A list containing the model performance and the personal predictions for each su
 Apply the existing model Atria stroke risk using the standardised framework
 }
 \details{
-This function applies Atria stroke risk to a target cohort and validates the performance
+This function applies ATRIA to a target cohort and validates the performance
 }

@@ -31,15 +31,17 @@
 #'
 #' @export
 plotDecisionCurve <- function(runPlpList, names=NULL, type=NULL){
-  if(class(runPlpList)=="runPlp"){
+  if(checkPlpObject(runPlpList)){
     if(is.null(names[1])){
       modelId = 'Model 1'
     }
     decisionCurve <- extractNetBenefit(runPlpList,type=type, modelId=modelId)
-  } else if(class(runPlpList)=="list" & class(runPlpList[[1]])=="runPlp"){
+  } else if(class(runPlpList)=="list" & checkPlpObject(runPlpList[[1]])){
     if(length(type)==1){type <- rep(type, length(runPlpList))}
     if(is.null(names[1])){
       modelId = paste0('Model ', 1:length(runPlpList))
+    }else{
+      modelId <- names # TODO: add a check for valid length
     }
     decisionCurve  <- lapply(1:length(runPlpList), function(i) extractNetBenefit(runPlpList[[i]],type[i], modelId=modelId[i]))
     decisionCurve <- do.call(rbind,decisionCurve)
@@ -55,7 +57,7 @@ plotDecisionCurve <- function(runPlpList, names=NULL, type=NULL){
     ggplot2::geom_line(data=decisionCurve[decisionCurve$modelId==unique(decisionCurve$modelId)[1],],
                        ggplot2::aes(x=pt, y=treatAll), color='black', linetype = "dotted",
                        size=1)+
-    ggplot2::ylim(-2,4) +
+    ggplot2::ylim(min(decisionCurve$netBenefit)*1.1,max(decisionCurve$netBenefit)*1.1) + #c(-2,4)
     ggplot2::xlab("Probability Threshold (or scaled risk score)") +
     ggplot2::labs(color = "Model Id",
                   caption = "The black dashed line is treat none and the black dotted line is treat all")
@@ -81,7 +83,7 @@ plotDecisionCurve <- function(runPlpList, names=NULL, type=NULL){
 #'
 #' @export
 plotMultipleRoc <- function(runPlpList, names, type='test', grid=T, ncol=2){
-  if(!class(runPlpList)=='list')
+  if(!checkPlpObject(runPlpList[[1]]))
     stop('List of runPlp objects requires - if single runPlp use plotSparseRoc')
 
   if(missing(names)){
@@ -95,10 +97,10 @@ plotMultipleRoc <- function(runPlpList, names, type='test', grid=T, ncol=2){
 
       if(is.null(runPlpList[[i]]$performanceEvaluation$thresholdSummary$Eval[1])){
         warning('Eval missing from thresholdSummary so using all values')
-        runPlpList[[i]]$performanceEvaluation$thresholdSummary$Eval <- type
+        runPlpList[[i]]$performanceEvaluation$thresholdSummary$Eval <- type[i]
       }
 
-      rocPlot[[i]] <- PatientLevelPrediction::plotSparseRoc(runPlpList[[i]]$performanceEvaluation, type=type) +
+      rocPlot[[i]] <- PatientLevelPrediction::plotSparseRoc(runPlpList[[i]]$performanceEvaluation, type=type[i]) +
         ggplot2::ggtitle(names[i], subtitle = NULL)
     }
     result <- do.call(gridExtra::grid.arrange, c(rocPlot, list(ncol=ncol)))
@@ -121,34 +123,42 @@ plotMultipleRoc <- function(runPlpList, names, type='test', grid=T, ncol=2){
 #' @param runPlpList    An object of class 'runPlp' or list of object of class 'runPlp' returned by implementing runPlp() or the output when implementing an existing model
 #' @param names         A string or vector of model names corresponding to the runPlpList
 #' @param type          A strng or vector of evaluation types (train/test/validation) to filter for each runPlp
+#' @param grid          Whether to plot each model seperately using a grid or overlay the plots (grid=F)
 #' @param ncol          The number of columns for the grid
 #'
 #' @return
 #' A plot is returned with the calibration plots for each model
 #'
 #' @export
-plotMultipleCal <- function(runPlpList, names, type='test', ncol=2){
-  if(!class(runPlpList)=='list')
+plotMultipleCal <- function(runPlpList, names, type='test', grid=F, ncol=2){
+  if(!checkPlpObject(runPlpList[[1]]))
     stop('List of runPlp objects requires - if single runPlp use plotSparseCalibration2')
 
   if(missing(names)){
     names <- paste0('Model ', 1:length(runPlpList))
   }
 
-  calPlot <- list()
-  length(calPlot) <- length(runPlpList)
-  for(i in 1:length(runPlpList)){
+  if(grid==T){
+    calPlot <- list()
+    length(calPlot) <- length(runPlpList)
+    for(i in 1:length(runPlpList)){
 
-    if(is.null(runPlpList[[i]]$performanceEvaluation$thresholdSummary$Eval[1])){
-      warning('Eval missing from thresholdSummary so using all values')
-      runPlpList[[i]]$performanceEvaluation$thresholdSummary$Eval <- type
+      if(is.null(runPlpList[[i]]$performanceEvaluation$thresholdSummary$Eval[1])){
+        warning('Eval missing from thresholdSummary so using all values')
+        runPlpList[[i]]$performanceEvaluation$thresholdSummary$Eval <- type[i]
+      }
+
+      calPlot[[i]] <- PatientLevelPrediction::plotSparseCalibration2(runPlpList[[i]]$performanceEvaluation, type=type[i]) +
+        ggplot2::ggtitle(names[i], subtitle = NULL)
     }
-
-    calPlot[[i]] <- PatientLevelPrediction::plotSparseCalibration2(runPlpList[[i]]$performanceEvaluation, type=type) +
-      ggplot2::ggtitle(names[i], subtitle = NULL)
+    result <- do.call(gridExtra::grid.arrange, c(calPlot, list(ncol=ncol)))
+    return(result)
   }
-  result <- do.call(gridExtra::grid.arrange, c(calPlot, list(ncol=ncol)))
+
+  # otherwise overlay plots...
+  result <- do.call(plotCals, list(evaluationList=runPlpList,modelNames=names, type=type))
   return(result)
+
 }
 
 
@@ -382,17 +392,17 @@ plotModelStratification3 <- function(runPlp, type='test',
                      y= do.call(c,lapply(1:ysize, function(i) rep(i,xsize))),
                      color = c(rep('Outcome',inc),rep('No Outcome', xsize*ysize-inc))
   )
-  plot1 <- ggplot(data, aes(y = y, x = x, fill = color)) +
-    geom_tile(color = "white") +
-    geom_text(x=xsize/2, y=ysize/2, label=paste0('Outcome Rate: ',round(incidence*100,1),'%'))+
-    theme(axis.title.y=element_blank(),
-          axis.text.y=element_blank(),
-          axis.ticks.y=element_blank(),
-          axis.title.x=element_blank(),
-          axis.text.x=element_blank(),
-          axis.ticks.x=element_blank(),
-          legend.title=element_blank())+
-    scale_fill_manual(values=c("#b3ff99", "#B22222"))
+  plot1 <- ggplot2::ggplot(data, ggplot2::aes(y = y, x = x, fill = color)) +
+    ggplot2::geom_tile(color = "white") +
+    ggplot2::geom_text(x=xsize/2, y=ysize/2, label=paste0('Outcome Rate: ',round(incidence*100,1),'%'))+
+    ggplot2::theme(axis.title.y=ggplot2::element_blank(),
+          axis.text.y=ggplot2::element_blank(),
+          axis.ticks.y=ggplot2::element_blank(),
+          axis.title.x=ggplot2::element_blank(),
+          axis.text.x=ggplot2::element_blank(),
+          axis.ticks.x=ggplot2::element_blank(),
+          legend.title=ggplot2::element_blank())+
+    ggplot2::scale_fill_manual(values=c("#b3ff99", "#B22222"))
 
 
   # ten values 0-x1, x1-x2, x2-x3, ...
@@ -417,21 +427,21 @@ plotModelStratification3 <- function(runPlp, type='test',
 
   #mydata <- reshape2::melt(riskPlot, id.vars=1:2)
 
-  plot2 <- ggplot(riskPlot , aes(riskgroup, size))+
-    geom_bar(stat = "identity", aes(fill = risk)) +
-    geom_text(aes(label=paste0('Outcome Rate: ',round(risk,1),'%') ),vjust=-0.3) +
-    theme(axis.title.y=element_blank(),
-          axis.text.y=element_blank(),
-          axis.ticks.y=element_blank()) +
+  plot2 <- ggplot2::ggplot(riskPlot , ggplot2::aes(riskgroup, size))+
+    ggplot2::geom_bar(stat = "identity", ggplot2::aes(fill = risk)) +
+    ggplot2::geom_text(aes(label=paste0('Outcome Rate: ',round(risk,1),'%') ),vjust=-0.3) +
+    ggplot2::theme(axis.title.y=ggplot2::element_blank(),
+          axis.text.y=ggplot2::element_blank(),
+          axis.ticks.y=ggplot2::element_blank()) +
     #scale_fill_manual(values=c("#B22222", "#b3ff99"))
-    scale_fill_gradient(low = "#b3ff99", high = "#B22222",
+    ggplot2::scale_fill_gradient(low = "#b3ff99", high = "#B22222",
                         space = "Lab", na.value = "grey50", guide = "colourbar")+
-    theme(#axis.title.x=element_blank(),
-      axis.text.x=element_blank(),
-      axis.ticks.x=element_blank(),
+    ggplot2::theme(#axis.title.x=element_blank(),
+      axis.text.x=ggplot2::element_blank(),
+      axis.ticks.x=ggplot2::element_blank(),
       legend.position="none")
 
-  plotResult <- grid.arrange(arrangeGrob(plot1, top="General Population Risk"),
+  plotResult <- gridExtra::grid.arrange(arrangeGrob(plot1, top="General Population Risk"),
                              arrangeGrob(plot2, top="Prediction Stratified Risk"),
                              nrow = 2, heights = c(5,5))
 
@@ -455,7 +465,7 @@ plotRocs <- function(evaluationList,modelNames, type='test', fileName=NULL){
     modelNames <- paste0('Model ', 1:length(evaluationList))
 
   createSteps <- function(evaluation, type, name){
-    if(length(evaluation$thresholdSummary$Eval)>0){
+    if(length(unique(evaluation$thresholdSummary$Eval))>1){
       ind <- evaluation$thresholdSummary$Eval==type
       x<- evaluation$thresholdSummary[ind,c('falsePositiveRate','sensitivity')]} else{
         x<- evaluation$thresholdSummary[,c('falsePositiveRate','sensitivity')]
@@ -472,7 +482,7 @@ plotRocs <- function(evaluationList,modelNames, type='test', fileName=NULL){
     return(x)
   }
 
-  stepVals <- lapply(1:length(evaluationList), function(i) createSteps(evaluationList[[i]], type=type, name=modelNames[i]))
+  stepVals <- lapply(1:length(evaluationList), function(i) createSteps(evaluationList[[i]], type=type[i], name=modelNames[i]))
   data<- do.call(rbind, stepVals)
 
   plot <- ggplot2::ggplot(data=data, ggplot2::aes(x=falsePositiveRate, y=sensitivity, color=model)) +
@@ -480,7 +490,9 @@ plotRocs <- function(evaluationList,modelNames, type='test', fileName=NULL){
     ggplot2::geom_line(size=1) +
     ggplot2::geom_abline(intercept = 0, slope = 1,linetype = 2) +
     ggplot2::scale_x_continuous("1 - specificity", limits=c(0,1)) +
-    ggplot2::scale_y_continuous("Sensitivity", limits=c(0,1))
+    ggplot2::scale_y_continuous("Sensitivity", limits=c(0,1)) +
+    ggplot2::scale_color_discrete(name = 'Result')+
+    ggplot2::scale_fill_discrete(guide=FALSE)
 
   if (!is.null(fileName))
     ggplot2::ggsave(fileName, plot, width = 5, height = 4.5, dpi = 400)
@@ -488,3 +500,57 @@ plotRocs <- function(evaluationList,modelNames, type='test', fileName=NULL){
 }
 
 
+
+plotCals <- function(evaluationList,modelNames, type='test', fileName=NULL){
+  if(class(evaluationList)!='list')
+    stop('Need to enter a list')
+
+  if("calibrationSummary"%in%names(evaluationList[[1]])){
+    evaluationList <- evaluationList
+  }else if("performanceEvaluation"%in%names(evaluationList[[1]])){
+    evaluationList <- lapply(evaluationList, function(x) x$performanceEvaluation)
+  } else{
+    stop('Wrong evaluationList')
+  }
+
+  if(missing(modelNames))
+    modelNames <- paste0('Model ', 1:length(evaluationList))
+
+  calVal <- function(evaluation, type, name){
+    if(length(unique(evaluation$calibrationSummary$Eval))>1){
+      ind <- evaluation$calibrationSummary$Eval==type
+      x<- evaluation$calibrationSummary[ind,c('averagePredictedProbability','observedIncidence','PersonCountAtRisk')]} else{
+        x<- evaluation$calibrationSummary[,c('averagePredictedProbability','observedIncidence','PersonCountAtRisk')]
+      }
+
+    cis <- apply(x, 1, function(x) binom.test(x[2]*x[3], x[3], alternative = c("two.sided"), conf.level = 0.95)$conf.int)
+    x$lci <- cis[1,]
+    x$uci <- cis[2,]
+    x$model <- name
+    return(x)
+  }
+
+  calVal<- lapply(1:length(evaluationList), function(i) calVal(evaluationList[[i]], type=type[i], name=modelNames[i]))
+  data<- do.call(rbind, calVal)
+
+  maxes <- max(max(data$averagePredictedProbability), max(data$observedIncidence))*1.1
+
+  limits <- ggplot2::aes(ymax = uci, ymin= lci)
+
+  plot <- ggplot2::ggplot(data=data,
+                          ggplot2::aes(x=averagePredictedProbability, y=observedIncidence,
+                                       color=model)) +
+    ggplot2::geom_point(size=2) +
+    ggplot2::geom_errorbar(limits) +
+    ggplot2::geom_line() +
+    ggplot2::geom_abline(intercept = 0, slope = 1, linetype = 5, size=0.4,
+                         show.legend = TRUE) +
+    ggplot2::scale_x_continuous("Average Predicted Probability") +
+    ggplot2::scale_y_continuous("Observed Fraction With Outcome") +
+    ggplot2::coord_cartesian(xlim = c(0, maxes), ylim=c(0,maxes)) +
+    ggplot2::scale_color_discrete(name = 'Result')
+
+  if (!is.null(fileName))
+    ggplot2::ggsave(fileName, plot, width = 5, height = 4.5, dpi = 400)
+  return(plot)
+}

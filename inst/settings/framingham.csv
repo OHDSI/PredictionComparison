@@ -1,0 +1,9 @@
+"covariateName","covariateId","points"
+"Age",1002,1
+"Female",8532001,6
+"Systolic Blool mm Hg 120-139",20455,1
+"Systolic Blool mm Hg 140-159",21455,2
+"Systolic Blool mm Hg 160-179",22455,3
+"Systolic Blool mm Hg >179",23455,4
+"Diabetes",27456,5
+"Stroke or TIA",50456,6

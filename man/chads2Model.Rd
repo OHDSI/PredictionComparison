@@ -4,12 +4,27 @@
 \alias{chads2Model}
 \title{Apply the existing model CHADs2 using the standardised framework}
 \usage{
-chads2Model(connectionDetails, cdmDatabaseSchema, cohortDatabaseSchema,
-  outcomeDatabaseSchema, cohortTable, outcomeTable, cohortId, outcomeId,
-  oracleTempSchema = NULL, riskWindowStart = 1, riskWindowEnd = 365,
-  addExposureDaysToEnd = F, requireTimeAtRisk = T, minTimeAtRisk = 364,
-  includeAllOutcomes = T, firstExposureOnly = F, removePriorOutcome = T,
-  recalibrate = T, calibrationPopulation = NULL)
+chads2Model(
+  connectionDetails,
+  cdmDatabaseSchema,
+  cohortDatabaseSchema,
+  outcomeDatabaseSchema,
+  cohortTable,
+  outcomeTable,
+  cohortId,
+  outcomeId,
+  oracleTempSchema = NULL,
+  riskWindowStart = 1,
+  riskWindowEnd = 365,
+  addExposureDaysToEnd = F,
+  requireTimeAtRisk = T,
+  minTimeAtRisk = 364,
+  includeAllOutcomes = T,
+  firstExposureOnly = F,
+  removePriorOutcome = T,
+  recalibrate = T,
+  calibrationPopulation = NULL
+)
 }
 \arguments{
 \item{connectionDetails}{The connection details for extracting the data}

@@ -13,7 +13,7 @@ Description: A package for comparing and storing patient level prediction models
 License: Apache License 2.0
 Depends:
     R (>= 3.3.0), 
-    PatientLevelPrediction (>= 3.0.10)
+    PatientLevelPrediction (>= 4.0.0)
 Imports:
     ggplot2,
     gridExtra,

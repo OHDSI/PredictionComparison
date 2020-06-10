@@ -76,7 +76,7 @@ getCohortCovariateData <- function(connection,
   sql <- SqlRender::translate(sql, targetDialect = attr(connection, "dbms"),
                               oracleTempSchema = oracleTempSchema)
   # Retrieve the covariate:
-  covariates <- DatabaseConnector::querySql.ffdf(connection, sql)
+  covariates <- DatabaseConnector::querySql(connection, sql)
   # Convert colum names to camelCase:
   colnames(covariates) <- SqlRender::snakeCaseToCamelCase(colnames(covariates))
   # Construct covariate reference:
@@ -95,7 +95,7 @@ getCohortCovariateData <- function(connection,
   sql <- SqlRender::translate(sql, targetDialect = attr(connection, "dbms"),
                               oracleTempSchema = oracleTempSchema)
   # Retrieve the covariateRef:
-  covariateRef  <- DatabaseConnector::querySql.ffdf(connection, sql)
+  covariateRef  <- DatabaseConnector::querySql(connection, sql)
   colnames(covariateRef) <- SqlRender::snakeCaseToCamelCase(colnames(covariateRef))
 
   analysisRef <- data.frame(analysisId = 456,
@@ -105,14 +105,14 @@ getCohortCovariateData <- function(connection,
                             endDay = 0,
                             isBinary = "Y",
                             missingMeansZero = "Y")
-  analysisRef <- tidyr::as_tibble(analysisRef)
 
   metaData <- list(sql = sql, call = match.call())
-  result <- list(covariates = covariates,
-                 covariateRef = covariateRef,
-                 analysisRef= analysisRef,
-                 metaData = metaData)
-  class(result) <- "covariateData"
+  
+  result <- Andromeda::andromeda(covariates = covariates,
+                                 covariateRef = covariateRef,
+                                 analysisRef = analysisRef)
+  attr(result, "metaData") <- metaData
+  class(result) <- "CovariateData"
   return(result)
 }
 

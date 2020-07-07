@@ -22,5 +22,4 @@
 #' @name PredictionComparison
 #' @importFrom utils write.csv read.csv
 #' @importFrom dplyr %>%
-#' @useDynLib PredictionComparison
 NULL

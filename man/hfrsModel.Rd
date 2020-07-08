@@ -15,7 +15,10 @@ hfrsModel(
   outcomeId,
   oracleTempSchema = NULL,
   riskWindowStart = 1,
+  startAnchor = "cohort start",
   riskWindowEnd = 365,
+  endAnchor = "cohort start",
+  endDay = -1,
   requireTimeAtRisk = T,
   minTimeAtRisk = 364,
   includeAllOutcomes = T,
@@ -46,9 +49,13 @@ hfrsModel(
 
 \item{riskWindowStart}{The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
 
+\item{startAnchor}{Is the risk start relative to cohort_start or cohort_end}
+
 \item{riskWindowEnd}{The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date}
 
-\item{requireTimeAtRisk}{Require a minimum number of days observed in the time at risk period?}
+\item{endAnchor}{Is the risk end relative to cohort_start or cohort_end}
+
+\item{endDay}{The last day relative to index for the covariates}
 
 \item{minTimeAtRisk}{If requireTimeAtRisk is true, the minimum number of days at risk}
 

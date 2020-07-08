@@ -49,9 +49,9 @@ qstrokeModel <- function(connectionDetails,
                          analysisId = 'Q-stroke-female',
                          sampleSize = NULL,
                          riskWindowStart = 1,
-                         startAnchor = 'cohort_start',
+                         startAnchor = 'cohort start',
                          riskWindowEnd = 365,
-                         endAnchor = 'cohort_start',
+                         endAnchor = 'cohort start',
                          endDay = -1,
                          requireTimeAtRisk = T,
                          minTimeAtRisk = 1,
@@ -130,7 +130,8 @@ qstrokeModel <- function(connectionDetails,
   length(covariateSettings) <- 1+nrow(cohortVarsToCreate)
   covariateSettings[[1]] <- FeatureExtraction::createCovariateSettings(useDemographicsAgeGroup = T,
                                                                        useMeasurementValueAnyTimePrior = T,
-                                                                       includedCovariateIds = c(3004249705,4156659705, (0:20)*1000+3)
+                                                                       includedCovariateIds = c(3004249705,4156659705, (0:20)*1000+3),
+                                                                       endDays= endDay
   )
 
   # add cohort covariates

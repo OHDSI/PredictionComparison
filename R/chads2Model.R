@@ -14,8 +14,10 @@
 #' @param outcomeId          An iteger specifying the cohort id for the outcome cohorts
 #' @param oracleTempSchema   The temp schema require is using oracle
 #' @param riskWindowStart    The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date
+#' @param startAnchor        Is the risk start relative to cohort_start or cohort_end
 #' @param riskWindowEnd      The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date
-#' @param addExposureDaysToEnd  Add the riskWindowEnd to the cohort end rather than the cohort start to define the end of TAR
+#' @param endAnchor          Is the risk end relative to cohort_start or cohort_end
+#' @param endDay            The last day relative to index for the covariates
 #' @param requireTimeAtRisk  Require a minimum number of days observed in the time at risk period?
 #' @param minTimeAtRisk      If requireTimeAtRisk is true, the minimum number of days at risk
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
@@ -38,8 +40,10 @@ chads2Model <- function(connectionDetails,
                     outcomeId,
                     oracleTempSchema=NULL,
                     riskWindowStart = 1,
+                    startAnchor = 'cohort start',
                     riskWindowEnd = 365,
-                    addExposureDaysToEnd = F,
+                    endAnchor = 'cohort start',
+                    endDay = -1,
                     requireTimeAtRisk = T,
                     minTimeAtRisk = 364,
                     includeAllOutcomes = T,
@@ -78,7 +82,7 @@ chads2Model <- function(connectionDetails,
   #                               covariateId=1903)
 
   # use history anytime prior by setting long term look back to 9999
-  covariateSettings <- FeatureExtraction::createCovariateSettings(useChads2 = T)
+  covariateSettings <- FeatureExtraction::createCovariateSettings(useChads2 = T, endDays = endDay)
 
   plpData <- PatientLevelPrediction::getPlpData(connectionDetails = connectionDetails,
                                      cdmDatabaseSchema = cdmDatabaseSchema,
@@ -97,7 +101,8 @@ population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             binary = T,
                                                             riskWindowStart = riskWindowStart,
                                                             riskWindowEnd = riskWindowEnd,
-                                                            addExposureDaysToEnd = addExposureDaysToEnd,
+                                                            startAnchor = startAnchor,
+                                                            endAnchor = endAnchor,
                                                             requireTimeAtRisk = requireTimeAtRisk,
                                                             minTimeAtRisk = minTimeAtRisk,
                                                             includeAllOutcomes = includeAllOutcomes,
@@ -105,18 +110,18 @@ population <- PatientLevelPrediction::createStudyPopulation(plpData=plpData,
                                                             removeSubjectsWithPriorOutcome =removePriorOutcome)
 
 
-  prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
+  prediction = merge(as.data.frame(plpData$covariateData$covariates), population, by='rowId', all.y=T)
 
 covSum <- PatientLevelPrediction:::covariateSummary(plpData, population)
 
 recalModel <- NULL
 if(!is.null(calibrationPopulation)){
   #re-calibrate model:
-  prediction <- base::merge(calibrationPopulation, prediction, by=c('subjectId','cohortStartDate'))
+  predictiont <- base::merge(calibrationPopulation, prediction, by=c('subjectId','cohortStartDate'))
   recalModel <- stats::glm(y ~ x,
                            family=stats::binomial(link='logit'),
-                           data=data.frame(x=prediction$covariateValue,
-                                           y=as.factor(prediction$outcomeCount))[prediction$indexes>0,])
+                           data=data.frame(x=predictiont$covariateValue,
+                                           y=as.factor(predictiont$outcomeCount))[predictiont$indexes>0,])
   value <- stats::predict(recalModel, data.frame(x=prediction$covariateValue),
                           type = "response")
   prediction$value <- value

@@ -49,9 +49,9 @@ hemorrhagesModel <- function(connectionDetails,
                          analysisId = 'hemorrhages',
                          sampleSize = NULL,
                          riskWindowStart = 1,
-                         startAnchor = 'cohort_start',
+                         startAnchor = 'cohort start',
                          riskWindowEnd = 365,
-                         endAnchor = 'cohort_start',
+                         endAnchor = 'cohort start',
                          endDay = -1,
                          requireTimeAtRisk = T,
                          minTimeAtRisk = 1,
@@ -120,7 +120,7 @@ hemorrhagesModel <- function(connectionDetails,
   ParallelLogger::logInfo('Creating covariate settings')
   covariateSettings <- list()
   length(covariateSettings) <- 1+nrow(cohortVarsToCreate)
-  covariateSettings[[1]] <- FeatureExtraction::createCovariateSettings(useDemographicsAgeGroup = T,
+  covariateSettings[[1]] <- FeatureExtraction::createCovariateSettings(useDemographicsAgeGroup = T, endDays = endDay,
                                                                        useMeasurementValueAnyTimePrior = ifelse(sum(covariateInfo$analysisId == 455)>0, T, F)
                                                                        #includedCovariateIds = measurement covariates of interest
   )

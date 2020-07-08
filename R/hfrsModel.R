@@ -14,8 +14,10 @@
 #' @param outcomeId          An iteger specifying the cohort id for the outcome cohorts
 #' @param oracleTempSchema   The temp schema require is using oracle
 #' @param riskWindowStart    The start of the period to predict the risk of the outcome occurring start relative to the target cohort start date
+#' @param startAnchor        Is the risk start relative to cohort_start or cohort_end
 #' @param riskWindowEnd      The end of the period to predict the risk of the outcome occurring start relative to the target cohort start date
-#' @param requireTimeAtRisk  Require a minimum number of days observed in the time at risk period?
+#' @param endAnchor          Is the risk end relative to cohort_start or cohort_end
+#' @param endDay            The last day relative to index for the covariates
 #' @param minTimeAtRisk      If requireTimeAtRisk is true, the minimum number of days at risk
 #' @param includeAllOutcomes  Whether to include people with outcome who do not satify the minTimeAtRisk
 #' @param firstExposureOnly   Whether to restrict to first target cohort start date if people are in target popualtion multiple times
@@ -37,7 +39,10 @@ hfrsModel   <- function(connectionDetails,
                         outcomeId,
                         oracleTempSchema=NULL,
                         riskWindowStart = 1,
+                        startAnchor = 'cohort start',
                         riskWindowEnd = 365,
+                        endAnchor = 'cohort start',
+                        endDay = -1,
                         requireTimeAtRisk = T,
                         minTimeAtRisk = 364,
                         includeAllOutcomes = T,
@@ -76,7 +81,7 @@ hfrsModel   <- function(connectionDetails,
   #                               covariateId=1903)
 
   # use history anytime prior by setting long term look back to 9999
-  covariateSettings <- FeatureExtraction::createCovariateSettings(useHfrs = T)
+  covariateSettings <- FeatureExtraction::createCovariateSettings(useHfrs = T,endDays = endDay)
 
   plpData <- PatientLevelPrediction::getPlpData(connectionDetails = connectionDetails,
                                                 cdmDatabaseSchema = cdmDatabaseSchema,
@@ -94,6 +99,8 @@ hfrsModel   <- function(connectionDetails,
                                                               binary = T,
                                                               riskWindowStart = riskWindowStart,
                                                               riskWindowEnd = riskWindowEnd,
+                                                              startAnchor = startAnchor,
+                                                              endAnchor = endAnchor,
                                                               requireTimeAtRisk = requireTimeAtRisk,
                                                               minTimeAtRisk = minTimeAtRisk,
                                                               includeAllOutcomes = includeAllOutcomes,
@@ -101,22 +108,29 @@ hfrsModel   <- function(connectionDetails,
                                                               removeSubjectsWithPriorOutcome =removePriorOutcome,
                                                               addExposureDaysToEnd= addExposureDaysToEnd)
 
-  prediction = merge(ff::as.ram(plpData$covariates), population, by='rowId', all.y=T)
+  prediction = merge(as.data.frame(plpData$covariateData$covariates), population, by='rowId', all.y=T)
+
+  covSum <- PatientLevelPrediction:::covariateSummary(plpData, population)
+
 
   if(!is.null(calibrationPopulation)){
     #re-calibrate model:
-    prediction <- base::merge(calibrationPopulation, prediction, by=c('subjectId','cohortStartDate'))
+    predictiont <- base::merge(calibrationPopulation, prediction, by=c('subjectId','cohortStartDate'))
     recalModel <- stats::glm(y ~ x,
                              family=stats::binomial(link='logit'),
-                             data=data.frame(x=prediction$covariateValue,
-                                             y=as.factor(prediction$outcomeCount))[prediction$indexes>0,])
+                             data=data.frame(x=predictiont$covariateValue,
+                                             y=as.factor(predictiont$outcomeCount))[predictiont$indexes>0,])
     value <- stats::predict(recalModel, data.frame(x=prediction$covariateValue),
                             type = "response")
     prediction$value <- value
   } else {
-    colnames(prediction)[colnames(prediction)=='covariateValue'] <- 'value'
-    prediction$value[is.na(prediction$value)] <- 0
-    prediction$value <- prediction$value/max(prediction$value)
+    recalModel <- stats::glm(y ~ x,
+                             family=stats::binomial(link='logit'),
+                             data=data.frame(x=prediction$covariateValue,
+                                             y=as.factor(prediction$outcomeCount)))
+    value <- stats::predict(recalModel, data.frame(x=prediction$covariateValue),
+                            type = "response")
+    prediction$value <- value
   }
 
   attr(prediction, "metaData")$predictionType <- 'binary'
@@ -157,12 +171,18 @@ hfrsModel   <- function(connectionDetails,
                        cohortId=cohortId,
                        outcomeId=outcomeId,
                        oracleTempSchema=oracleTempSchema)
-  result <- list(model=list(model='chads2'),
+  result <- list(model=list(model='chads2',
+                            modelName=NULL,
+                            modelTable=NULL,
+                            covariateTable=NULL,
+                            interceptTable=NULL,
+                            recalModel = recalModel),
                  analysisRef ='000000',
                  inputSetting =inputSetting,
                  executionSummary = 'Not available',
                  prediction=prediction,
-                 performanceEvaluation=performance)
+                 performanceEvaluation=performance,
+                 covariateSummary = covSum)
   class(result$model) <- 'plpModel'
   attr(result$model, "type")<- 'existing model'
   class(result) <- 'runPlp'

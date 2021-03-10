@@ -130,7 +130,7 @@ plotMultipleRoc <- function(runPlpList, names, type='test', grid=T, ncol=2){
 #' A plot is returned with the calibration plots for each model
 #'
 #' @export
-plotMultipleCal <- function(runPlpList, names, type='test', grid=F, ncol=2){
+plotMultipleCal <- function(runPlpList, names, type='test', style = "sparse", grid=F, ncol=2){
   if(!checkPlpObject(runPlpList[[1]]))
     stop('List of runPlp objects requires - if single runPlp use plotSparseCalibration2')
 
@@ -156,7 +156,7 @@ plotMultipleCal <- function(runPlpList, names, type='test', grid=F, ncol=2){
   }
 
   # otherwise overlay plots...
-  result <- do.call(plotCals, list(evaluationList=runPlpList,modelNames=names, type=type))
+  result <- do.call(plotCals, list(evaluationList=runPlpList,modelNames=names, type=type, style = style))
   return(result)
 
 }
@@ -501,7 +501,7 @@ plotRocs <- function(evaluationList,modelNames, type='test', fileName=NULL){
 
 
 
-plotCals <- function(evaluationList,modelNames, type='test', fileName=NULL){
+plotCals <- function(evaluationList,modelNames, type='test', style = "sparse", fileName=NULL){
   if(class(evaluationList)!='list')
     stop('Need to enter a list')
 
@@ -515,7 +515,7 @@ plotCals <- function(evaluationList,modelNames, type='test', fileName=NULL){
 
   if(missing(modelNames))
     modelNames <- paste0('Model ', 1:length(evaluationList))
-
+  if(style == "sparse"){
   calVal <- function(evaluation, type, name){
     if(length(unique(evaluation$calibrationSummary$Eval))>1){
       ind <- evaluation$calibrationSummary$Eval==type
@@ -549,6 +549,34 @@ plotCals <- function(evaluationList,modelNames, type='test', fileName=NULL){
     ggplot2::scale_y_continuous("Observed Fraction With Outcome") +
     ggplot2::coord_cartesian(xlim = c(0, maxes), ylim=c(0,maxes)) +
     ggplot2::scale_color_discrete(name = 'Result')
+  }
+  else if (style == "smooth"){
+    #we need to change this probably
+    span = 1
+    smoothData <- dplyr::bind_rows(lapply(evaluationList, '[[','prediction'), .id = 'source') %>%
+      select(source, value, outcomeCount)
+
+    # the main plot object, this one uses Loess regression
+    plot <- ggplot2::ggplot(data = smoothData) +
+            ggplot2::stat_smooth(ggplot2::aes(x = value, y = outcomeCount, color = source, linetype = "a"),
+                           method = "loess",
+                           se = TRUE,
+                           span = span,
+                           size = 1,
+                           show.legend = T) +
+            ggplot2::geom_segment(ggplot2::aes(x = 0,
+                                               xend = 1,
+                                               y = 0,
+                                               yend = 1,
+                                               color = '0',
+                                               linetype = "b")) +
+      # ggplot2::scale_linetype_manual("", values=c(1,2,2))+
+      # ggplot2::scale_shape_manual("", values=c(17,16,16)) +
+      ggplot2::scale_color_discrete(name = "Models", labels = c("Ideal", names)) +
+      ggplot2::scale_linetype_discrete(name = "Models", labels = c("Ideal", names))+
+      ggplot2::guides(linetype = FALSE) +
+      ggplot2::labs(x = "Predicted Probability", y = "Observed Probability")
+   }
 
   if (!is.null(fileName))
     ggplot2::ggsave(fileName, plot, width = 5, height = 4.5, dpi = 400)

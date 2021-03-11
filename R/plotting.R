@@ -507,8 +507,10 @@ plotCals <- function(evaluationList,modelNames, type='test', style = "sparse", f
 
   if("calibrationSummary"%in%names(evaluationList[[1]])){
     evaluationList <- evaluationList
-  }else if("performanceEvaluation"%in%names(evaluationList[[1]])){
+  }else if("performanceEvaluation"%in%names(evaluationList[[1]]) & style == "sparse"){
     evaluationList <- lapply(evaluationList, function(x) x$performanceEvaluation)
+  }else if("prediction"%in%names(evaluationList[[1]]) & style == "smooth"){
+    evaluationList <- evaluationList
   } else{
     stop('Wrong evaluationList')
   }
@@ -570,10 +572,8 @@ plotCals <- function(evaluationList,modelNames, type='test', style = "sparse", f
                                                yend = 1,
                                                color = '0',
                                                linetype = "b")) +
-      # ggplot2::scale_linetype_manual("", values=c(1,2,2))+
-      # ggplot2::scale_shape_manual("", values=c(17,16,16)) +
-      ggplot2::scale_color_discrete(name = "Models", labels = c("Ideal", names)) +
-      ggplot2::scale_linetype_discrete(name = "Models", labels = c("Ideal", names))+
+
+      ggplot2::scale_color_discrete(name = "Models", labels = c("Ideal", modelNames)) +
       ggplot2::guides(linetype = FALSE) +
       ggplot2::labs(x = "Predicted Probability", y = "Observed Probability")
    }

@@ -509,7 +509,9 @@ plotCals <- function(evaluationList,modelNames, type='test', style = "sparse", f
     evaluationList <- evaluationList
   }else if("performanceEvaluation"%in%names(evaluationList[[1]]) & style == "sparse"){
     evaluationList <- lapply(evaluationList, function(x) x$performanceEvaluation)
-  }else if("prediction"%in%names(evaluationList[[1]]) & style == "smooth"){
+  # }else if("prediction"%in%names(evaluationList[[1]]) & style == "smooth"){
+    #todo: fix this awful hack
+  }else if(style == "smooth"){
     evaluationList <- evaluationList
   } else{
     stop('Wrong evaluationList')
@@ -553,31 +555,38 @@ plotCals <- function(evaluationList,modelNames, type='test', style = "sparse", f
     ggplot2::scale_color_discrete(name = 'Result')
   }
   else if (style == "smooth"){
+    if('prediction'%in%names(evaluationList[[1]])){
     #we need to change this probably
-    span = 1
-    smoothData <- dplyr::bind_rows(lapply(evaluationList, '[[','prediction'), .id = 'source') %>%
-      select(source, value, outcomeCount)
 
+        smoothData <- dplyr::bind_rows(lapply(evaluationList, '[[','prediction'), .id = 'source') %>%
+          select(source, value, outcomeCount)
+    } else{
+        roughData <- dplyr::bind_rows(lapply(evaluationList, function(x) x[['performanceEvaluation']][['calibrationSummary']]),
+                                              .id = 'source')
+        smoothData <- roughData %>%
+          filter(Eval != 'train') %>%
+          mutate(value = averagePredictedProbability, outcomeCount = observedIncidence) %>%
+          select(source, value, outcomeCount)
+
+    }
     # the main plot object, this one uses Loess regression
     plot <- ggplot2::ggplot(data = smoothData) +
             ggplot2::stat_smooth(ggplot2::aes(x = value, y = outcomeCount, color = source, linetype = "a"),
                            method = "loess",
                            se = TRUE,
-                           span = span,
+                           span = 1,
                            size = 1,
                            show.legend = T) +
             ggplot2::geom_segment(ggplot2::aes(x = 0,
-                                               xend = 1,
+                                               xend = max(outcomeCount,value) + 0.05,
                                                y = 0,
-                                               yend = 1,
+                                               yend = max(outcomeCount,value)+ 0.05,
                                                color = '0',
                                                linetype = "b")) +
-
-      ggplot2::scale_color_discrete(name = "Models", labels = c("Ideal", modelNames)) +
-      ggplot2::guides(linetype = FALSE) +
-      ggplot2::labs(x = "Predicted Probability", y = "Observed Probability")
-   }
-
+            ggplot2::scale_color_discrete(name = "Models", labels = c("Ideal", modelNames)) +
+            ggplot2::guides(linetype = FALSE) +
+            ggplot2::labs(x = "Predicted Probability", y = "Observed Probability")
+       }
   if (!is.null(fileName))
     ggplot2::ggsave(fileName, plot, width = 5, height = 4.5, dpi = 400)
   return(plot)

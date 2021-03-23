@@ -507,13 +507,11 @@ plotCals <- function(evaluationList,modelNames, type='test', style = "sparse", f
 
   if("calibrationSummary"%in%names(evaluationList[[1]])){
     evaluationList <- evaluationList
-  }else if("performanceEvaluation"%in%names(evaluationList[[1]]) & style == "sparse"){
-    evaluationList <- lapply(evaluationList, function(x) x$performanceEvaluation)
-  # }else if("prediction"%in%names(evaluationList[[1]]) & style == "smooth"){
-    #todo: fix this awful hack
-  }else if(style == "smooth"){
+  } else if(style == "smooth"){
     evaluationList <- evaluationList
-  } else{
+  } else if("performanceEvaluation"%in%names(evaluationList[[1]])){
+    evaluationList <- lapply(evaluationList, function(x) x$performanceEvaluation)
+  }else{
     stop('Wrong evaluationList')
   }
 
@@ -534,7 +532,7 @@ plotCals <- function(evaluationList,modelNames, type='test', style = "sparse", f
     return(x)
   }
 
-  calVal<- lapply(1:length(evaluationList), function(i) calVal(evaluationList[[i]], type=type[i], name=modelNames[i]))
+  calVal<- lapply(1:length(evaluationList), function(i) calVal(evaluationList[[i]], type=type, name=modelNames[i]))
   data<- do.call(rbind, calVal)
 
   maxes <- max(max(data$averagePredictedProbability), max(data$observedIncidence))*1.1
